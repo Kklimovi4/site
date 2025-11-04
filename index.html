@@ -1,0 +1,2565 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Панель управления БД — обновлённая</title>
+  <style>
+    :root{
+      --bg:#0e1320;
+      --card:#151b2f;
+      --muted:#2a355a;
+      --text:#dbe2ff;
+      --text-dim:#9aa7cf;
+      --accent:#20d6a8;
+      --accent-2:#1fb9f2;
+      --danger:#ff4d4f;
+      --radius:14px;
+      --gap:16px;
+    }
+    *{box-sizing:border-box}
+    body {
+  margin: 0;
+  background: radial-gradient(1200px 600px at 20% -10%, rgba(40,65,140,.35), transparent),
+              linear-gradient(180deg, #0b1020 0%, #0a0d18 100%);
+  color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+  overflow-y: auto;      
+  display: block;         
+  min-height: 100vh;      
+}
+#loginModal {
+  background: var(--card);
+  padding: 20px;
+  border-radius: var(--radius);
+  position: fixed;  /* Изменим с absolute на fixed, чтобы окно было фиксированным */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;  /* Это обеспечит, что модальное окно будет сверху */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%; /* Сделать ширину 100% */
+  height: 100%; /* Сделать высоту 100% */
+}
+
+   .page {
+  max-width: 1420px;
+  margin: 28px auto;
+  padding: 0 28px;
+  overflow-x: auto;
+}
+    h1{font-weight:700; font-size:28px; margin:0 0 18px}
+    .tabs{
+      display:flex; gap:10px; flex-wrap:wrap;
+      margin: 6px 0 18px;
+    }
+    .tab{
+      background:linear-gradient(180deg, #1a2240 0%, #141b33 100%);
+      border:1px solid #26325a;
+      color:var(--text);
+      padding:10px 16px;
+      border-radius:12px;
+      cursor:pointer;
+      user-select:none;
+      transition: transform .08s ease, box-shadow .15s ease, background .15s ease;
+      box-shadow: 0 3px 0 rgba(0,0,0,.35);
+    }
+    .tab.active{
+      background:linear-gradient(180deg, #1c2a56 0%, #152042 100%);
+      outline:1px solid #2f4178;
+      box-shadow: 0 0 0 2px rgba(47,65,120,.35);
+    }
+    .row{display:grid; gap:var(--gap)}
+    .row.filters{
+      grid-template-columns: 2fr 2fr 2fr 2fr 2fr 2fr;
+      align-items:end;
+    }
+    .card{
+      background:linear-gradient(180deg, #121a32 0%, #0f162d 100%);
+      border:1px solid #26325a;
+      border-radius:var(--radius);
+      padding:14px;
+    }
+    label{display:block; color:var(--text-dim); font-size:12px; margin:0 0 6px}
+    select, input[type="text"], input[type="password"]{
+      width:100%; height:42px; border-radius:12px;
+      border:1px solid #2b3a68;
+      background:#0c1227; color:var(--text); padding:0 12px;
+      outline:none; transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    select:focus, input[type="text"]:focus, input[type="password"]:focus{border-color:#3d56a3; box-shadow:0 0 0 3px rgba(63,98,200,.25)}
+    table{width:100%; border-collapse:collapse}
+    th, td{padding:12px 14px; border-bottom:1px solid #26325a; text-align:left; vertical-align:top}
+    th{color:#b9c6ee; font-weight:600; font-size:13px; letter-spacing:.02em}
+    tr:hover td{background:rgba(41,58,104,.18)}
+    .actions{display:flex; gap:8px; flex-direction:column}
+    .btn{
+      border:0; padding:10px 14px; border-radius:12px; cursor:pointer;
+      font-weight:600; color:#0b1226; background:var(--accent);
+      transition: transform .05s ease;
+    }
+    .btn:active{transform:translateY(1px)}
+    .btn.secondary{background:var(--accent-2)}
+    .btn.danger{background:var(--danger); color:#fff}
+    .layout{
+      display:grid; grid-template-columns: 2.2fr 1.2fr; gap:var(--gap);
+    }
+    .muted{color:var(--text-dim)}
+    .toast{
+      position:fixed; right:20px; bottom:20px; padding:12px 16px;
+      border-radius:12px; background:#172347; border:1px solid #2d3b6a; color:var(--text);
+      box-shadow: 0 8px 30px rgba(0,0,0,.35); max-width:520px;
+      z-index: 99;
+    }
+    .gear{
+      margin-left:auto; display:flex; align-items:center; gap:8px;
+      color:var(--text-dim); font-size:13px;
+    }
+    .gear input{width:280px}
+    .empty{color:var(--text-dim); padding:18px}
+    .hint{font-size:12px; color:var(--text-dim); margin-top:8px}
+    .form-grid{display:grid; grid-template-columns: 1fr 1fr; gap:12px}
+    .form-actions{display:flex; gap:10px; margin-top:12px; align-items:center}
+
+    /* --- Анимации --- */
+    @keyframes rowFadeIn {
+      from { opacity:0; transform: translateY(-6px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+    @keyframes rowFadeOut {
+      to { opacity:0; transform: translateY(6px); }
+    }
+    tr.row-added td{
+      animation: rowFadeIn .35s ease both;
+      box-shadow: inset 0 0 0 1000px rgba(32,214,168,0.12);
+    }
+    tr.row-removed td{
+      animation: rowFadeOut .25s ease forwards;
+      background: rgba(255,77,79,.12);
+    }
+
+    /* ===== Drawer (правая панель) для Файлов/Таблиц ===== */
+    .drawer-backdrop{
+      position:fixed; inset:0; background:rgba(0,0,0,.35);
+      opacity:0; pointer-events:none; transition:.2s ease opacity;
+      z-index: 90;
+    }
+    .drawer{
+      position:fixed; top:0; right:-580px; width:580px; height:100vh;
+      background:linear-gradient(180deg, #121a32 0%, #0f162d 100%);
+      border-left:1px solid #26325a;
+      box-shadow: -10px 0 30px rgba(0,0,0,.35);
+      z-index: 91; transition:right .25s ease;
+      display:flex; flex-direction:column;
+    }
+    .drawer.open{ right:0; }
+    .drawer-backdrop.open{ opacity:1; pointer-events:auto; }
+    .drawer-head{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px; border-bottom:1px solid #26325a;
+    }
+    .drawer-title{font-weight:700; font-size:18px}
+    .drawer-body{padding:14px; overflow:auto; flex:1}
+    .drawer-tabs{display:flex; gap:8px; padding:0 14px 10px; border-bottom:1px solid #26325a}
+    .drawer-tab{
+      background:linear-gradient(180deg, #1a2240 0%, #141b33 100%);
+      border:1px solid #26325a; color:var(--text); padding:8px 12px; border-radius:10px; cursor:pointer;
+    }
+    .drawer-tab.active{
+      background:linear-gradient(180deg, #1c2a56 0%, #152042 100%);
+      outline:1px solid #2f4178;
+    }
+    .file-item{border:1px solid #2b3a68; border-radius:12px; padding:10px; margin:10px 0}
+    .file-head{display:flex; align-items:center; justify-content:space-between; gap:8px}
+    .file-actions{display:flex; gap:8px; flex-wrap:wrap}
+    .table-scroll{overflow:auto; border:1px solid #2b3a68; border-radius:10px; margin-top:8px}
+    .mini-table{width:100%; border-collapse:collapse}
+    .mini-table th, .mini-table td{border-bottom:1px solid #26325a; padding:8px 10px; white-space:nowrap}
+    .soft{color:var(--text-dim); font-size:12px}
+    .inline{display:inline-flex; gap:8px; align-items:center}
+    .grid{display:grid; gap:10px}
+    .grid-2{grid-template-columns: 1fr 1fr}
+    .kbd{background:#111834; border:1px solid #2d3b6a; padding:1px 6px; border-radius:6px; font-size:12px; color:#cdd8ff}
+    .pill{border:1px solid #2b3a68; padding:6px 10px; border-radius:999px}
+    .input{height:38px; border-radius:10px; border:1px solid #2b3a68; background:#0c1227; color:var(--text); padding:0 10px; outline:none}
+    .area{min-height:90px; border-radius:10px; border:1px solid #2b3a68; background:#0c1227; color:var(--text); padding:10px; outline:none}
+    .divider{height:1px; background:#26325a; margin:12px 0}
+    .row-actions{display:flex; gap:8px}
+    .small{font-size:12px}
+  </style>
+</head>
+<body>
+  <div id="appContainer" class="page" style="display:none;">
+    <h1 style="display:flex;align-items:center;gap:12px;">
+      Панель управления БД
+    </h1>
+  <div style="position: absolute; right: 20px; top: 20px; color: var(--text-dim); font-size: 14px;">
+    <span id="currentUserInfo"></span>
+    <button onclick="logout()" class="btn secondary" style="margin-left: 10px; padding: 5px 10px;">Выйти</button>
+  </div>
+
+    <div class="tabs" id="tabs"></div>
+
+    <!-- Глобальная панель фильтров (показывается выборочно по вкладкам) -->
+    <div class="row filters card" id="filters">
+      <div data-filter="direction">
+        <label>Дирекция</label>
+        <select id="f_direction"></select>
+      </div>
+      <div data-filter="department">
+        <label>Подразделение</label>
+        <select id="f_department"></select>
+      </div>
+      <div data-filter="building">
+        <label>Здание</label>
+        <select id="f_building"></select>
+      </div>
+      <div data-filter="room">
+        <label>Помещение</label>
+        <select id="f_room"></select>
+      </div>
+      <div data-filter="row">
+        <label>Ряд шкафов</label>
+        <select id="f_row"></select>
+      </div>
+      <div data-filter="cabinet">
+        <label>Шкаф</label>
+        <select id="f_cabinet"></select>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="card">
+        <h3 style="margin:0 0 10px" id="listTitle">Список</h3>
+        <div id="listContainer"></div>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 10px" id="formTitle">Добавить</h3>
+        <form id="form"></form>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" style="display:none"></div>
+
+  <!-- ===== Drawer: правая панель файлов/кастом-таблиц ===== -->
+  <div id="drawerBackdrop" class="drawer-backdrop"></div>
+  <aside id="filesDrawer" class="drawer" aria-hidden="true" inert>
+    <div class="drawer-head">
+      <div class="drawer-title" id="drawerTitle">Файлы</div>
+      <div class="inline">
+        <button class="btn secondary" type="button" id="drawerCloseBtn">Закрыть</button>
+      </div>
+    </div>
+    <div class="drawer-tabs">
+      <button id="tabFilesBtn" class="drawer-tab active" type="button">Файлы</button>
+    </div>
+    <div class="drawer-body">
+      <!-- Вкладка Файлы -->
+      <div id="tabFiles" style="display:block">
+        <div class="grid grid-2">
+          <div>
+            <label class="soft">Загрузить Excel/CSV</label>
+            <form id="uploadForm" class="inline" onsubmit="return false;">
+              <input class="input" type="file" id="uploadFileInput" name="file" />
+              <button class="btn" type="submit">Загрузить</button>
+            </form>
+            <div class="hint">Поддерживаются .xlsx, .xls, .csv. Первый лист будет показан как предпросмотр.</div>
+          </div>
+          <div>
+            <label class="soft">Подсказки</label>
+            <div class="pill small">Имя файла = версия схемы/раскладка</div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <div id="filesList"></div>
+      </div>
+    </div>
+  </aside>
+ <div id="loginModal" style="display: flex; justify-content: center; align-items: center; position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000;">
+    <div style="background: var(--card); padding: 20px; border-radius: var(--radius); width: 320px; position: relative;">
+      <h3 style="margin-top: 0;">Вход в систему</h3>
+
+      <div style="margin-bottom: 15px;">
+        <label class="soft">API:</label>
+        <input id="apiBaseInput" type="text" placeholder="https://ip:port/api" class="input" style="width: 100%; margin-bottom: 6px;" />
+        <button class="btn secondary" id="saveApiBtn" type="button" style="width: 100%;">Сохранить</button>
+      </div>
+
+      <div style="margin-bottom: 15px;">
+        <label>Логин:</label>
+        <input type="text" id="loginUsername" class="input" style="width: 100%;">
+      </div>
+      <div style="margin-bottom: 20px;">
+        <label>Пароль:</label>
+        <input type="password" id="loginPassword" class="input" style="width: 100%;">
+      </div>
+      <button class="btn" onclick="performLogin()" style="width: 100%;">Войти</button>
+    </div>
+  </div>
+
+
+  <script>
+  // ---------- Конфиг вкладок ----------
+  const TABS = [
+    {key:'directions',  title:'Дирекции'},
+    {key:'departments', title:'Подразделения'},
+    {key:'buildings',   title:'Здания'},
+    {key:'rooms',       title:'Помещения'},
+    {key:'rows',        title:'Ряды шкафов'},
+    {key:'cabinets',    title:'Шкафы'},
+    {key:'equipment',   title:'Оборудование'},
+    {key:'employees',   title:'Сотрудники'}
+  ];
+
+  // какие фильтры показывать для каждой вкладки
+  const FILTERS_BY_TAB = {
+    directions: [],
+    departments: ['direction'],
+    buildings: ['direction','department'],
+    rooms: ['direction','department','building'],
+    rows: ['direction','department','building','room'],
+    cabinets: ['direction','department','building','room','row'],
+    equipment: ['direction','department','building','room','row','cabinet'],
+    employees: ['direction','department','building']
+  };
+document.getElementById('saveApiBtn').addEventListener('click', () => {
+  const api = document.getElementById('apiBaseInput').value;
+  if (api) {
+    localStorage.setItem('apiBase', api);  // Сохраняем API в localStorage
+    toast('API сохранён!');
+  } else {
+    toast('Введите корректный API!');
+  }
+});
+
+  const state = {
+    tab: 'directions',
+    dataLoaded: false,
+    edit: null, // {endpoint,id,record}
+    filters: {direction_id:null, department_id:null, building_id:null, room_id:null, row_id:null, cabinet_id:null},
+    data: {
+      directions:[], departments:[], buildings:[], rooms:[], rows:[], cabinets:[],
+      equipment:[], employees:[]
+    },
+    lookupsLoaded:false,
+    justAdded: null, // {endpoint,id,ts}
+    user: null,
+    drawer: {
+      open: false,
+      equipmentId: null,
+      equipmentName: '',
+      files: [],
+      customTables: [],
+      activeTab: 'files' // 'files' | 'custom'
+    },
+     autoRefresh: {
+        enabled: true,
+        interval: 30000, // 30 секунд
+        lastUpdate: null,
+        timer: null
+    }
+  };
+
+function startAutoRefresh() {
+    if (state.autoRefresh.timer) {
+        clearInterval(state.autoRefresh.timer);
+    }
+    
+    state.autoRefresh.timer = setInterval(async () => {
+        await checkForUpdates();
+    }, state.autoRefresh.interval);
+    
+    console.log('Автообновление запущено');
+}
+
+function stopAutoRefresh() {
+    if (state.autoRefresh.timer) {
+        clearInterval(state.autoRefresh.timer);
+        state.autoRefresh.timer = null;
+    }
+    console.log('Автообновление остановлено');
+}
+
+
+async function checkNameUnique(endpoint, name, excludeId = null) {
+  try {
+    const data = await apiGet(endpoint);
+    const existing = data.find(item => 
+      item.name.toLowerCase() === name.toLowerCase() && 
+      item.id !== excludeId
+    );
+    return !existing; // true если имя уникально
+  } catch (error) {
+    console.error(`Ошибка проверки имени для ${endpoint}:`, error);
+    return true; // В случае ошибки разрешаем сохранение
+  }
+}
+
+async function checkRoomUnique(name, buildingId, excludeId = null) {
+  try {
+    const rooms = await apiGet('rooms');
+    const existing = rooms.find(room => 
+      room.name.toLowerCase() === name.toLowerCase() && 
+      room.building_id === buildingId &&
+      room.id !== excludeId
+    );
+    return !existing;
+  } catch (error) {
+    console.error('Ошибка проверки помещения:', error);
+    return true;
+  }
+}
+
+async function checkCabinetUnique(name, rowId, excludeId = null) {
+  try {
+    const cabinets = await apiGet('cabinets');
+    const existing = cabinets.find(cabinet => 
+      cabinet.name.toLowerCase() === name.toLowerCase() && 
+      cabinet.cabinet_row_id === rowId &&
+      cabinet.id !== excludeId
+    );
+    return !existing;
+  } catch (error) {
+    console.error('Ошибка проверки шкафа:', error);
+    return true;
+  }
+}
+
+async function checkEquipmentUnique(name, cabinetId, excludeId = null) {
+  try {
+    const equipment = await apiGet('equipment');
+    const existing = equipment.find(item => 
+      item.name.toLowerCase() === name.toLowerCase() && 
+      item.cabinet_id === cabinetId &&
+      item.id !== excludeId
+    );
+    return !existing;
+  } catch (error) {
+    console.error('Ошибка проверки оборудования:', error);
+    return true;
+  }
+}
+
+async function refreshCurrentTabData() {
+    const endpoint = getCurrentEndpoint();
+    console.log(`🔄 Обновление данных для: ${endpoint}`);
+    
+    try {
+        const freshData = await apiGet(endpoint);
+        const filterFn = getDataFilter(endpoint);
+        const filteredData = filterFn ? freshData.filter(filterFn) : freshData;
+        
+        // Обновляем только нужную коллекцию
+        const collectionKey = getCollectionKey(endpoint);
+        state.data[collectionKey] = filteredData;
+        
+        // ДОБАВЛЕНО: обновляем кэш при автообновлении
+        updateLookupsCache();
+        
+        console.log(`✅ Данные обновлены: ${filteredData.length} записей`);
+        return true;
+    } catch (error) {
+        console.error('❌ Ошибка обновления данных:', error);
+        return false;
+    }
+}
+// Вспомогательная функция для получения ключа коллекции
+function getCollectionKey(endpoint) {
+    const map = {
+        'directions': 'directions',
+        'departments': 'departments', 
+        'buildings': 'buildings',
+        'rooms': 'rooms',
+        'cabinet_rows': 'rows',
+        'cabinets': 'cabinets',
+        'equipment': 'equipment',
+        'employees_info': 'employees'
+    };
+    return map[endpoint] || endpoint;
+}
+
+async function checkForUpdates() {
+    try {
+        console.log('🔍 Проверка обновлений...');
+        const result = await apiGet('site/last-updates');
+        const currentUpdate = result.last_update;
+        
+        // Если это первая проверка или время изменилось
+        if (!state.autoRefresh.lastUpdate || state.autoRefresh.lastUpdate !== currentUpdate) {
+            console.log('🔄 Обнаружены изменения, обновляю текущую вкладку...');
+            await refreshCurrentTabData();
+            render();
+            toast('Данные обновлены', 2000);
+        } else {
+            console.log('✅ Изменений нет');
+        }
+        
+        state.autoRefresh.lastUpdate = currentUpdate;
+    } catch (error) {
+        console.error('❌ Ошибка проверки обновлений:', error);
+    }
+}
+function getCurrentEndpoint() {
+  switch(state.tab) {
+    case 'directions': return 'directions';
+    case 'departments': return 'departments';
+    case 'buildings': return 'buildings';
+    case 'rooms': return 'rooms';
+    case 'rows': return 'cabinet_rows';
+    case 'cabinets': return 'cabinets';
+    case 'equipment': return 'equipment';
+    case 'employees': return 'employees_info';
+    default: return state.tab;
+  }
+}
+
+function debugUserAndData() {
+  console.log("=== DEBUG INFO ===");
+  console.log("User:", state.user);
+  console.log("Current tab:", state.tab);
+  console.log("Data loaded:", state.lookupsLoaded);
+  
+  if (state.user) {
+    console.log("User direction_id:", state.user.direction_id);
+    console.log("User role:", state.user.role);
+  }
+  
+  // Проверим, какие данные есть
+  console.log("Directions count:", state.data.directions.length);
+  console.log("Departments count:", state.data.departments.length);
+  console.log("Buildings count:", state.data.buildings.length);
+  
+  // Проверим фильтр для текущей вкладки
+  const endpoint = getCurrentEndpoint();
+  console.log("Current endpoint:", endpoint);
+  
+  const filterFn = getDataFilter(endpoint);
+  console.log("Filter function exists:", !!filterFn);
+  
+  if (filterFn && state.data[endpoint]) {
+    const filteredData = state.data[endpoint].filter(filterFn);
+    console.log(`Filtered data for ${endpoint}:`, filteredData.length, "items");
+    console.log("Filtered items:", filteredData);
+  } else if (state.data[endpoint]) {
+    console.log(`All data for ${endpoint}:`, state.data[endpoint].length, "items");
+  }
+  
+  console.log("=== END DEBUG ===");
+}
+
+  function toast(msg, ms=2600){
+    const box = document.getElementById('toast');
+    box.innerHTML = msg;
+    box.style.display = 'block';
+    setTimeout(()=> box.style.display='none', ms);
+  }
+
+// Функция для показа модального окна логина
+function showLoginModal() {
+  document.getElementById('loginModal').style.display = 'flex'; // Show login modal
+  document.getElementById('appContainer').style.display = 'none'; // Hide app content
+}
+
+// Функция для выполнения логина
+async function performLogin() {
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    if (!username || !password) {
+        toast('Введите логин и пароль');
+        return;
+    }
+    
+    try {
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic ' + btoa(username + ':' + password)
+        };
+        
+        const url = getApiBase().replace(/\/$/, '') + '/login';
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({ login: username, password })
+        });
+        
+        if (!res.ok) {
+            throw new Error(`Ошибка ${res.status}`);
+        }
+        
+        const result = await res.json();
+        
+        if (result.success) {
+            state.user = {
+                login: username,
+                password: password,
+                department_id: result.department_id,
+                direction_id: result.direction_id,
+                full_name: result.full_name,
+                role: result.role
+            };
+            
+            localStorage.setItem('userData', JSON.stringify(state.user));
+            
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
+            
+            // Загружаем данные только ОДИН раз
+            await loadLookups();
+            bindFilterEvents();
+            resetFilters();
+            updateUIForUserRole();
+            updateUserInfo();
+            await render(); // render теперь не должен загружать данные
+            
+            startAutoRefresh();
+            
+            toast('Авторизация успешна');
+            return true;
+        } else {
+            toast('Ошибка авторизации: ' + (result.message || 'Неизвестная ошибка'));
+            return false;
+        }
+    } catch (error) {
+        console.error('Ошибка логина:', error);
+        
+        if (error.message.includes('401')) {
+            toast('Неверный логин или пароль');
+        } else {
+            toast('Ошибка авторизации: ' + error.message);
+        }
+        
+        return false;
+    }
+}
+// ---------- Функции для работы с пользователем ----------
+function updateUIForUserRole() {
+  const role = state.user?.role?.toLowerCase();
+  const tabs = document.querySelectorAll('.tabs button');
+  
+ tabs.forEach(btn => {
+    const tab = btn.getAttribute('data-tab');
+    btn.style.display = 'none'; // Сначала скрываем все
+    if (role === 'электромеханик') {
+      if (['rooms', 'rows', 'cabinets', 'equipment'].includes(tab)) {
+        btn.style.display = 'inline-block';
+      }
+    }
+    else if (role === 'оператор') {
+      if (tab === 'employees') {
+        btn.style.display = 'inline-block';
+      }
+    }
+    else if (role === 'главный инженер') {
+      if (['buildings', 'rooms', 'rows', 'cabinets', 'equipment', 'employees'].includes(tab)) {
+        btn.style.display = 'inline-block';
+      }
+    }
+    else if (role === 'цсс') {
+      if (['directions', 'departments', 'buildings', 'rooms', 'rows', 'cabinets', 'equipment', 'employees'].includes(tab)) {
+        btn.style.display = 'inline-block';
+       }
+      }
+  });
+
+  // Если активная вкладка скрыта → переключаем на доступную
+  const activeTab = document.querySelector('.tabs button.active');
+  if (activeTab && activeTab.style.display === 'none') {
+    const firstVisible = [...tabs].find(btn => btn.style.display !== 'none');
+    if (firstVisible) {
+      firstVisible.click();
+    }
+  }
+}
+
+function getDataFilter(endpoint) {
+  // --- нормализация названий endpoint-ов ---
+  const map = {
+    rows: 'cabinet_rows',
+    employees: 'employees_info'
+  };
+  endpoint = map[endpoint] || endpoint;
+
+  const role = state.user?.role?.toLowerCase();
+
+  if (role === 'электромеханик') {
+    return (item) => {
+      if (endpoint === 'rooms') {
+        const building = state.data.buildings.find(b => b.id == item.building_id);
+        return building && building.department_id === state.user.department_id;
+      }
+      if (endpoint === 'cabinet_rows') {
+        const room = state.data.rooms.find(r => r.id == item.room_id);
+        if (!room) return false;
+        const building = state.data.buildings.find(b => b.id == room.building_id);
+        return building && building.department_id === state.user.department_id;
+      }
+      if (endpoint === 'cabinets') {
+        const row = state.data.rows.find(r => r.id == item.cabinet_row_id);
+        if (!row) return false;
+        const room = state.data.rooms.find(r => r.id == row.room_id);
+        const building = state.data.buildings.find(b => b.id == room.building_id);
+        return building && building.department_id === state.user.department_id;
+      }
+      if (endpoint === 'equipment') {
+        const cabinet = state.data.cabinets.find(c => c.id == item.cabinet_id);
+        if (!cabinet) return false;
+        const row = state.data.rows.find(r => r.id == cabinet.cabinet_row_id);
+        const room = state.data.rooms.find(r => r.id == row.room_id);
+        const building = state.data.buildings.find(b => b.id == room.building_id);
+        return building && building.department_id === state.user.department_id;
+      }
+      return true;
+    };
+  }
+
+  if (role === 'главный инженер') {
+  return (item) => {
+    if (endpoint === 'directions') {
+      return item.id === state.user.direction_id;
+    }
+    if (endpoint === 'departments' || endpoint === 'employees_info') {
+      return item.direction_id === state.user.direction_id;
+    }
+    if (endpoint === 'buildings') {
+      const dep = state.data.departments.find(d => d.id == item.department_id);
+      return dep && dep.direction_id === state.user.direction_id;
+    }
+    if (endpoint === 'rooms') {
+      const building = state.data.buildings.find(b => b.id == item.building_id);
+      if (!building) return false;
+      const dep = state.data.departments.find(d => d.id == building.department_id);
+      return dep && dep.direction_id === state.user.direction_id;
+    }
+    if (endpoint === 'cabinet_rows') {
+      const room = state.data.rooms.find(r => r.id == item.room_id);
+      if (!room) return false;
+      const building = state.data.buildings.find(b => b.id == room.building_id);
+      if (!building) return false;
+      const dep = state.data.departments.find(d => d.id == building.department_id);
+      return dep && dep.direction_id === state.user.direction_id;
+    }
+    if (endpoint === 'cabinets') {
+      const row = state.data.rows.find(r => r.id == item.cabinet_row_id);
+      if (!row) return false;
+      const room = state.data.rooms.find(r => r.id == row.room_id);
+      if (!room) return false;
+      const building = state.data.buildings.find(b => b.id == room.building_id);
+      if (!building) return false;
+      const dep = state.data.departments.find(d => d.id == building.department_id);
+      return dep && dep.direction_id === state.user.direction_id;
+    }
+    if (endpoint === 'equipment') {
+      const cabinet = state.data.cabinets.find(c => c.id == item.cabinet_id);
+      if (!cabinet) return false;
+      const row = state.data.rows.find(r => r.id == cabinet.cabinet_row_id);
+      if (!row) return false;
+      const room = state.data.rooms.find(r => r.id == row.room_id);
+      if (!room) return false;
+      const building = state.data.buildings.find(b => b.id == room.building_id);
+      if (!building) return false;
+      const dep = state.data.departments.find(d => d.id == building.department_id);
+      return dep && dep.direction_id === state.user.direction_id;
+    }
+    return true;
+  };
+}
+
+  if (role === 'оператор') {
+    return (item) => {
+      if (endpoint === 'employees_info') {
+        return item.department_id === state.user.department_id;
+      }
+      if (endpoint === 'departments') {
+        return item.id === state.user.department_id;
+      }
+      if (endpoint === 'buildings') {
+        return item.department_id === state.user.department_id;
+      }
+      if (endpoint === 'directions') {
+        return item.id === state.user.direction_id;
+      }
+      return false;
+    };
+  }
+  if (role === 'цсс') {
+      return null; // Без фильтрации
+    }
+
+  return null;
+}
+
+async function fetchAndRender(endpoint) {
+  const filterFn = getDataFilter(endpoint);
+  const data = await api(endpoint);
+  return filterFn ? data.filter(filterFn) : data;
+}
+
+function updateUserInfo() {
+  if (state.user) {
+    const dep = state.data.departments.find(d => d.id == state.user.department_id);
+    const dir = state.data.directions.find(d => d.id == state.user.direction_id);
+    let info = `${state.user.full_name} (${state.user.role})`;
+    if (dir) info += ` · ${dir.name}`;
+    if (dep) info += ` · ${dep.name}`;
+     const autoRefreshText = state.autoRefresh.enabled ? '🔄 Вкл' : '⏸️ Выкл';
+        byId('currentUserInfo').innerHTML = `
+            ${info} 
+            <button onclick="toggleAutoRefresh()" class="btn secondary" style="margin-left: 10px; padding: 2px 8px; font-size: 12px;">
+                ${autoRefreshText}
+            </button>
+        `;
+    }
+}
+
+function toggleAutoRefresh() {
+    state.autoRefresh.enabled = !state.autoRefresh.enabled;
+    
+    if (state.autoRefresh.enabled) {
+        startAutoRefresh();
+    } else {
+        stopAutoRefresh();
+    }
+    
+    updateUserInfo();
+    toast(`Автообновление ${state.autoRefresh.enabled ? 'включено' : 'выключено'}`);
+}
+
+function logout() {
+  state.user = null;
+  state.data = {
+    directions:[], departments:[], buildings:[], rooms:[], rows:[], cabinets:[],
+    equipment:[], employees:[]
+  };
+  state.lookupsLoaded = false;
+  stopAutoRefresh();
+  localStorage.removeItem('userData');
+  localStorage.removeItem('lookupsCache');
+  
+  // Показываем модалку логина, скрываем приложение
+  document.getElementById('loginModal').style.display = 'flex';
+  document.getElementById('appContainer').style.display = 'none';
+  
+  // Сбрасываем форму
+  document.getElementById('loginUsername').value = '';
+  document.getElementById('loginPassword').value = '';
+}
+  // ---------- API helpers ----------
+  function getApiBase(){
+    return localStorage.getItem('apiBase') || document.getElementById('apiBaseInput').placeholder;
+  }
+  function getAuthHeaders() {
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+  if (state.user) {
+    const userData = JSON.parse(localStorage.getItem('userData'));
+    if (userData && userData.login) {
+      // Используем Basic Auth
+      headers['Authorization'] = 'Basic ' + btoa(userData.login + ':' + (userData.password || ''));
+    }
+  }
+  
+  return headers;
+}
+  async function apiGet(path){
+  const cleanPath = path.replace(/^\/api\//, '/');
+  const url = getApiBase().replace(/\/$/, '') + '/' + cleanPath.replace(/^\//,'');
+  try {
+    const res = await fetch(url, {
+      headers: getAuthHeaders()
+    });
+    
+    if (!res.ok) {
+      console.warn('Ошибка ответа:', res.status, url);
+      
+      // Если 401 - разлогиниваем
+      if (res.status === 401) {
+        toast('Сессия истекла. Требуется повторный вход.');
+        setTimeout(() => logout(), 2000);
+      }
+      
+      throw new Error('HTTP ' + res.status + ' — ' + url);
+    }
+
+    let json;
+    try {
+      json = await res.json();
+    } catch {
+      console.error('Ответ не JSON:', url);
+      return [];
+    }
+    return json;
+  } catch (err) {
+    console.error('Ошибка сети при GET', err.message);
+    
+    if (err.message.includes('401')) {
+      toast('Ошибка авторизации');
+    } else {
+      toast('Ошибка подключения к серверу: ' + err.message);
+    }
+    
+    return [];
+  }
+}
+  // Добавление новой записи
+async function apiPost(path, body) {
+  const url = getApiBase().replace(/\/$/, '') + '/' + path.replace(/^\//, '');
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      let errorMessage = `Ошибка ${res.status}: ${errorText}`;
+      
+      // Парсим JSON ошибки если возможно
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.error && errorJson.error.includes('unique')) {
+          errorMessage = 'Ошибка: запись с таким именем уже существует';
+        } else if (errorJson.error) {
+          errorMessage = `Ошибка: ${errorJson.error}`;
+        }
+      } catch {
+        // Если не JSON, используем текст как есть
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    const data = await res.json();
+    console.log('Добавлено:', data);
+    toast('✅ Добавлено');
+
+    updateLocalDataAfterChange(path, data, 'add');
+    return data;
+
+  } catch (err) {
+    console.error('Ошибка при POST:', err);
+    toast('❌ Не удалось добавить: ' + err.message, 4000);
+    return null;
+  }
+}
+
+
+// Изменение существующей записи
+async function apiPut(path, body) {
+  const url = getApiBase().replace(/\/$/, '') + '/' + path.replace(/^\//, '');
+  try {
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const msg = await res.text();
+      throw new Error(`Ошибка ${res.status}: ${msg}`);
+    }
+
+    const data = await res.json();
+    console.log('Изменено:', data);
+    toast('✅ Изменено');
+
+    updateLocalDataAfterChange(path, data, 'update');
+    return data;
+
+  } catch (err) {
+    console.error('Ошибка при PUT:', err);
+    toast('❌ Не удалось изменить: ' + err.message, 4000);
+    return null;
+  }
+}
+
+
+// Удаление записи
+async function apiDelete(path) {
+  const url = getApiBase().replace(/\/$/, '') + '/' + path.replace(/^\//, '');
+  try {
+    const res = await fetch(url, { 
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+
+    if (!res.ok) {
+      const msg = await res.text();
+      throw new Error(`Ошибка ${res.status}: ${msg}`);
+    }
+
+    toast('🗑️ Удалено');
+    updateLocalDataAfterChange(path, null, 'delete');
+    return true;
+
+  } catch (err) {
+    console.error('Ошибка при DELETE:', err);
+    toast('❌ Не удалось удалить: ' + err.message, 4000);
+    return false;
+  }
+}
+  async function apiPostForm(path, formData){
+  const url = getApiBase().replace(/\/$/, '') + '/' + path.replace(/^\//,'');
+  
+  // Для FormData не устанавливаем Content-Type, браузер сам установит
+  const headers = {};
+  if (state.user) {
+    const userData = JSON.parse(localStorage.getItem('userData'));
+    if (userData && userData.login) {
+      headers['Authorization'] = 'Basic ' + btoa(userData.login + ':' + (userData.password || ''));
+    }
+  }
+  
+  const res = await fetch(url, { 
+    method: 'POST', 
+    headers,
+    body: formData 
+  });
+  
+  if(!res.ok){
+    let t = await res.text().catch(()=> '');
+    throw new Error('HTTP '+res.status+' — '+t);
+  }
+  return await res.json().catch(()=>({ok:true}));
+}
+
+function updateLocalDataAfterChange(path, item, action) {
+    let key = path.split('/')[0];
+    const endpointToKeyMap = {
+        'employees_info': 'employees',
+        'cabinet_rows': 'rows',
+        'directions': 'directions',
+        'departments': 'departments', 
+        'buildings': 'buildings',
+        'rooms': 'rooms',
+        'cabinets': 'cabinets',
+        'equipment': 'equipment'
+    };
+    
+    key = endpointToKeyMap[key] || key;
+    const collection = state.data[key];
+    
+    if (!Array.isArray(collection)) {
+        console.warn('Collection not found for key:', key);
+        return;
+    }
+
+    switch (action) {
+        case 'add':
+            collection.push(item);
+            break;
+        case 'update':
+            const idx = collection.findIndex(x => x.id === item.id);
+            if (idx !== -1) collection[idx] = item;
+            break;
+        case 'delete':
+            const id = parseInt(path.split('/').pop(), 10);
+            state.data[key] = collection.filter(x => x.id !== id);
+            break;
+    }
+
+    // Обновляем время последнего изменения
+    state.autoRefresh.lastUpdate = new Date().toISOString();
+    
+    // Обновляем кэш
+    updateLookupsCache();
+
+    // Перерисовываем интерфейс с задержкой
+    setTimeout(() => {
+        try { 
+            render(); 
+        } catch (e) { 
+            console.warn('Ошибка при render()', e); 
+        }
+    }, 100);
+}
+
+// ---------- Функция логина ----------
+
+async function checkLoginUnique(login, excludeId = null) {
+  try {
+    const employees = await apiGet('employees_info');
+    const existing = employees.find(emp => 
+      emp.login.toLowerCase() === login.toLowerCase() && 
+      emp.id !== excludeId
+    );
+    return !existing; // true если логин уникален
+  } catch (error) {
+    console.error('Ошибка проверки логина:', error);
+    return true; // В случае ошибки разрешаем сохранение
+  }
+}
+
+async function loginUser(login, password) {
+    try {
+        const result = await apiPost('/login', { login, password });
+        
+        if (result.success) {
+            // Сохраняем данные пользователя
+            state.user = {
+                department_id: result.department_id,
+                direction_id: result.direction_id,
+                role: result.role,
+                full_name: result.full_name
+            };
+            
+            // Сохраняем в localStorage
+            localStorage.setItem('userData', JSON.stringify(state.user));
+            
+            // Скрываем модалку и показываем приложение
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
+            
+            // Теперь загружаем данные
+            await loadLookups();
+            bindFilterEvents();
+            resetFilters();
+            updateUIForUserRole();
+            updateUserInfo();
+            await render();
+            
+            toast('Авторизация успешна');
+            return true;
+        } else {
+            toast('Ошибка авторизации: ' + (result.message || 'Неизвестная ошибка'));
+            return false;
+        }
+    } catch (error) {
+        console.error('Ошибка логина:', error);
+        toast('Ошибка авторизации: ' + error.message);
+        return false;
+    }
+}
+
+  // ---------- UI bootstrap ----------
+  function buildTabs(){
+    const wrap = document.getElementById('tabs');
+    wrap.innerHTML = '';
+    for(const t of TABS){
+      const b = document.createElement('button');
+      b.className = 'tab'+(state.tab===t.key?' active':'');
+      b.textContent = t.title;
+	b.setAttribute('data-tab', t.key);
+      b.onclick = ()=> switchTab(t.key);
+      wrap.appendChild(b);
+    }
+  }
+
+  async function switchTab(key){
+    state.tab = key;
+    state.edit = null;
+    buildTabs();
+    resetFilters(); // сбрасываем фильтры при переходе
+    updateFiltersVisibility();
+    await render();
+  }
+
+  function resetFilters(){
+    // Просто сбрасываем все фильтры
+  state.filters = {
+    direction_id: null,
+    department_id: null, 
+    building_id: null,
+    room_id: null,
+    row_id: null,
+    cabinet_id: null
+  };
+  
+  byId('f_direction').value = '';
+  byId('f_department').value = '';
+  byId('f_building').value = '';
+  byId('f_room').value = '';
+  byId('f_row').value = '';
+  byId('f_cabinet').value = '';
+  
+  // каскад - функция fillAllFilterOptions сама применит ролевые ограничения
+  fillAllFilterOptions();
+}
+
+ async function loadLookups(forceRefresh = false) {
+    // Если данные уже загружены и не требуется принудительное обновление - выходим
+    if (state.dataLoaded && !forceRefresh) {
+        console.log('📁 Данные уже загружены, пропускаем...');
+        fillAllFilterOptions();
+        return;
+    }
+    
+    console.log('📥 Начало загрузки данных...', forceRefresh ? '(ПРИНУДИТЕЛЬНО)' : '');
+    
+    const MAX_CACHE_AGE = 10 * 60 * 1000;
+    
+    if (!forceRefresh) {
+        const cached = localStorage.getItem('lookupsCache');
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                const cacheAge = Date.now() - new Date(parsed.lastUpdated).getTime();
+                const isCacheValid = parsed.userRole === state.user?.role && 
+                                    cacheAge < MAX_CACHE_AGE;
+                
+                if (isCacheValid) {
+                    state.data = parsed.data;
+                    state.lookupsLoaded = true;
+                    state.dataLoaded = true; // Устанавливаем флаг
+                    fillAllFilterOptions();
+                    console.log('✅ Загружено из кэша (' + Math.round(cacheAge/1000/60) + ' мин)');
+                    return;
+                }
+            } catch (err) {
+                console.warn('❌ Ошибка чтения кэша:', err);
+            }
+        }
+    }
+
+    console.log('📥 Загрузка с сервера...');
+    await loadEssentialData();
+}
+
+async function loadEssentialData() {
+    const essentialEndpoints = [
+        'directions', 'departments', 'buildings',
+        'rooms', 'cabinet_rows', 'cabinets',
+        'equipment', 'employees_info'
+    ];
+    
+    try {
+        const results = await Promise.all(
+            essentialEndpoints.map(ep => apiGet(ep).catch(() => []))
+        );
+
+        const [
+            directions, departments, buildings,
+            rooms, rows, cabinets, equipment, employees
+        ] = results;
+
+        state.data = {
+            directions, departments, buildings,
+            rooms, rows, cabinets, equipment, employees
+        };
+
+        state.lookupsLoaded = true;
+        state.dataLoaded = true; // Устанавливаем флаг после загрузки
+        fillAllFilterOptions();
+        
+        updateLookupsCache();
+        console.log('✅ Все данные загружены с сервера');
+    } catch (e) {
+        console.error('❌ Ошибка загрузки данных:', e);
+        toast('Не удалось загрузить данные. Проверьте API: ' + e.message, 4000);
+        throw e;
+    }
+}
+function updateLookupsCache() {
+    try {
+        localStorage.setItem('lookupsCache', JSON.stringify({
+            userRole: state.user?.role,
+            data: state.data,
+            lastUpdated: new Date().toISOString()
+        }));
+    } catch (e) {
+        console.warn('⚠️ Ошибка обновления кэша:', e);
+    }
+}
+
+// Функция задержки
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+  // ---------- Фильтры и каскады ----------
+  function updateFiltersVisibility(){
+    const wrap = byId('filters');
+  const role = state.user?.role?.toLowerCase();
+  const toShow = new Set(FILTERS_BY_TAB[state.tab]);
+  wrap.style.display = toShow.size ? '' : 'none';
+  wrap.querySelectorAll('[data-filter]').forEach(el=>{
+    const filterType = el.getAttribute('data-filter');
+    let shouldShow = toShow.has(filterType);
+    
+    // Для электромеханика скрываем дирекцию, подразделение и здание
+    if (role === 'электромеханик') {
+      if (['direction', 'department', 'building'].includes(filterType)) {
+        shouldShow = false;
+      }
+    }
+    else if (role === 'главный инженер') {
+      if (filterType === 'direction') {
+        shouldShow = false; // Скрываем фильтр дирекции
+      }
+    }
+    // Для оператора скрываем дирекцию
+    else if (role === 'оператор') {
+      if (filterType === 'direction') {
+        shouldShow = false;
+      }
+    }
+    else if (role === 'цсс') {
+        // Все фильтры остаются видимыми
+      }
+    el.style.display = shouldShow ? '' : 'none';
+  });
+  
+  // Пересчитываем видимые фильтры после применения ролевых ограничений
+  const visibleFilters = wrap.querySelectorAll('[data-filter]').length - 
+                        wrap.querySelectorAll('[data-filter][style*="display: none"]').length;
+  if (visibleFilters === 0) {
+    wrap.style.display = 'none';
+  }
+}
+
+  function fillAllFilterOptions(){
+    const dirSel = byId('f_direction');
+  
+  // Используем существующую функцию фильтрации
+  const filterFn = getDataFilter('directions');
+  const filteredDirections = filterFn ? state.data.directions.filter(filterFn) : state.data.directions;
+  
+  dirSel.innerHTML = `<option value="">Все дирекции</option>` +
+    filteredDirections.map(d=>`<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('');
+  
+  fillDepartmentOptions();
+  fillBuildingOptions();
+  fillRoomOptions();
+  fillRowOptions();
+  fillCabinetOptions();
+}
+
+function fillDepartmentOptions(){
+  const depSel = byId('f_department');
+  const dir = state.filters.direction_id;
+  
+  // Сначала фильтруем по выбранной дирекции
+  let arr = state.data.departments;
+  if (dir) {
+    arr = arr.filter(d => d.direction_id == dir);
+  }
+  
+  // Затем применяем ролевую фильтрацию
+  const filterFn = getDataFilter('departments');
+  if (filterFn) {
+    arr = arr.filter(filterFn);
+  }
+  
+  depSel.innerHTML = `<option value="">Все подразделения</option>` +
+    arr.map(d=>`<option value="${d.id}" ${state.filters.department_id == d.id ? 'selected' : ''}>${escapeHtml(d.name)}</option>`).join('');
+}
+
+function fillBuildingOptions(){
+  const bSel = byId('f_building');
+  const dep = state.filters.department_id;
+  
+  let arr = state.data.buildings;
+  if (dep) {
+    arr = arr.filter(b => b.department_id == dep);
+  }
+  
+  const filterFn = getDataFilter('buildings');
+  if (filterFn) {
+    arr = arr.filter(filterFn);
+  }
+  
+  bSel.innerHTML = `<option value="">Все здания</option>` +
+    arr.map(b=>`<option value="${b.id}" ${state.filters.building_id == b.id ? 'selected' : ''}>${escapeHtml(b.name)}</option>`).join('');
+}
+
+function fillRoomOptions(){
+  const rSel = byId('f_room');
+  const b = state.filters.building_id;
+  
+  let arr = state.data.rooms;
+  if (b) {
+    arr = arr.filter(x => x.building_id == b);
+  }
+  
+  const filterFn = getDataFilter('rooms');
+  if (filterFn) {
+    arr = arr.filter(filterFn);
+  }
+  
+  rSel.innerHTML = `<option value="">Все помещения</option>` +
+    arr.map(x=>`<option value="${x.id}" ${state.filters.room_id == x.id ? 'selected' : ''}>${escapeHtml(x.name)}</option>`).join('');
+}
+
+function fillRowOptions(){
+  const rwSel = byId('f_row');
+  const r = state.filters.room_id;
+  
+  let arr = state.data.rows;
+  if (r) {
+    arr = arr.filter(x => x.room_id == r);
+  }
+  
+  const filterFn = getDataFilter('cabinet_rows');
+  if (filterFn) {
+    arr = arr.filter(filterFn);
+  }
+  
+  rwSel.innerHTML = `<option value="">Все ряды</option>` +
+    arr.map(x=>`<option value="${x.id}" ${state.filters.row_id == x.id ? 'selected' : ''}>${escapeHtml(x.name)}</option>`).join('');
+}
+
+function fillCabinetOptions(){
+  const cSel = byId('f_cabinet');
+  const row = state.filters.row_id;
+  
+  let arr = state.data.cabinets;
+  if (row) {
+    arr = arr.filter(c => c.cabinet_row_id == row);
+  }
+  
+  const filterFn = getDataFilter('cabinets');
+  if (filterFn) {
+    arr = arr.filter(filterFn);
+  }
+  
+  cSel.innerHTML = `<option value="">Все шкафы</option>` +
+    arr.map(x=>`<option value="${x.id}" ${state.filters.cabinet_id == x.id ? 'selected' : ''}>${escapeHtml(x.name || x.code || ('Шкаф #'+x.id))}</option>`).join('');
+}
+
+function debounce(fn, delay=400) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), delay);
+  };
+}
+
+  function bindFilterEvents(){
+const debouncedRender = debounce(render, 400);
+    byId('f_direction').onchange = (e)=>{
+      state.filters.direction_id = e.target.value || null;
+      state.filters.department_id = null;
+      state.filters.building_id = null;
+      state.filters.room_id = null;
+      state.filters.row_id = null;
+      state.filters.cabinet_id = null;
+      fillDepartmentOptions(); fillBuildingOptions(); fillRoomOptions(); fillRowOptions(); fillCabinetOptions();
+      debouncedRender();
+    };
+    byId('f_department').onchange = (e)=>{
+      state.filters.department_id = e.target.value || null;
+      state.filters.building_id = null;
+      state.filters.room_id = null;
+      state.filters.row_id = null;
+      state.filters.cabinet_id = null;
+      fillBuildingOptions(); fillRoomOptions(); fillRowOptions(); fillCabinetOptions();
+      debouncedRender();
+    };
+    byId('f_building').onchange = (e)=>{
+      state.filters.building_id = e.target.value || null;
+      state.filters.room_id = null;
+      state.filters.row_id = null;
+      state.filters.cabinet_id = null;
+      fillRoomOptions(); fillRowOptions(); fillCabinetOptions();
+      debouncedRender();
+    };
+    byId('f_room').onchange = (e)=>{
+      state.filters.room_id = e.target.value || null;
+      state.filters.row_id = null;
+      state.filters.cabinet_id = null;
+      fillRowOptions(); fillCabinetOptions();
+      debouncedRender();
+    };
+    byId('f_row').onchange = (e)=>{
+      state.filters.row_id = e.target.value || null;
+      state.filters.cabinet_id = null;
+      fillCabinetOptions();
+      debouncedRender();
+    };
+    byId('f_cabinet').onchange = (e)=>{
+      state.filters.cabinet_id = e.target.value || null;
+      debouncedRender();
+    };
+  }
+
+  let renderLock = false;
+
+async function render(){
+  if (renderLock) return;
+  renderLock = true;
+
+  try {
+    const title = TABS.find(t=>t.key===state.tab).title;
+    byId('listTitle').textContent = title;
+    byId('formTitle').textContent = (state.edit ? 'Изменить: ' : 'Добавить: ') + title;
+    buildTabs();
+    updateUIForUserRole();
+    updateFiltersVisibility();
+    renderForm();
+    renderList();
+  } finally {
+    renderLock = false;
+  }
+}
+
+  function escapeHtml(s){
+    return (s??'').toString().replace(/[&<>"]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m]));
+  }
+  function escapeAttr(s){ return (s??'').toString().replace(/"/g,'&quot;'); }
+
+  function renderList(){
+    const wrap = byId('listContainer');
+    const F = state.filters;
+
+    // Быстрые мапы
+    const dirById = Object.fromEntries(state.data.directions.map(x=>[x.id,x]));
+    const depById = Object.fromEntries(state.data.departments.map(x=>[x.id,x]));
+    const bById   = Object.fromEntries(state.data.buildings.map(x=>[x.id,x]));
+    const roomById= Object.fromEntries(state.data.rooms.map(x=>[x.id,x]));
+    const rowById = Object.fromEntries(state.data.rows.map(x=>[x.id,x]));
+    const cabById = Object.fromEntries(state.data.cabinets.map(x=>[x.id,x]));
+
+    let rows = [];
+    let headers = [];
+
+    const roleFilter = getDataFilter(getCurrentEndpoint());
+
+  function applyRoleFilter(data) {
+    if (!roleFilter) return data;
+    return data.filter(roleFilter);
+  }
+
+  function getCurrentEndpoint() {
+    switch(state.tab) {
+      case 'directions': return 'directions';
+      case 'departments': return 'departments';
+      case 'buildings': return 'buildings';
+      case 'rooms': return 'rooms';
+      case 'rows': return 'cabinet_rows';
+      case 'cabinets': return 'cabinets';
+      case 'equipment': return 'equipment';
+      case 'employees': return 'employees_info';
+      default: return state.tab;
+    }
+  }
+
+  switch(state.tab){
+    case 'directions':
+      headers = ['Дирекция','Действия'];
+      rows = applyRoleFilter(state.data.directions)
+        .map(d=>[escapeHtml(d.name), actions('directions', d.id, d)]);
+      break;
+
+    case 'departments':
+      headers = ['Дирекция','Подразделение','Действия'];
+      let depsData = state.data.departments
+        .filter(x=> !F.direction_id || x.direction_id==F.direction_id);
+      rows = applyRoleFilter(depsData)
+        .map(x=>[escapeHtml(dirById[x.direction_id]?.name||'—'), escapeHtml(x.name), actions('departments', x.id, x)]);
+      break;
+
+    case 'buildings':
+      headers = ['Дирекция','Подразделение','Здание','Действия'];
+      let bldsData = state.data.buildings
+        .filter(x=> !F.department_id || x.department_id==F.department_id)
+        .filter(x=> !F.direction_id || (depById[x.department_id]?.direction_id==F.direction_id));
+      rows = applyRoleFilter(bldsData)
+        .map(x=>[
+          escapeHtml(dirById[depById[x.department_id]?.direction_id]?.name || '—'),
+          escapeHtml(depById[x.department_id]?.name || '—'),
+          escapeHtml(x.name),
+          actions('buildings', x.id, x)
+        ]);
+      break;
+
+    case 'rooms':
+      headers = ['Дирекция','Подразделение','Здание','Помещение','Действия'];
+      let roomsData = state.data.rooms
+        .filter(x=> !F.building_id || x.building_id==F.building_id)
+        .filter(x=> !F.department_id || (bById[x.building_id]?.department_id==F.department_id))
+        .filter(x=> !F.direction_id || (depById[bById[x.building_id]?.department_id]?.direction_id==F.direction_id));
+      rows = applyRoleFilter(roomsData)
+        .map(x=>[
+          escapeHtml(dirById[depById[bById[x.building_id]?.department_id]?.direction_id]?.name || '—'),
+          escapeHtml(depById[bById[x.building_id]?.department_id]?.name || '—'),
+          escapeHtml(bById[x.building_id]?.name || '—'),
+          escapeHtml(x.name),
+          actions('rooms', x.id, x)
+        ]);
+      break;
+
+    case 'rows':
+      headers = ['Дирекция','Подразделение','Здание','Помещение','Ряд','Действия'];
+      let rowsData = state.data.rows
+        .filter(x=> !F.room_id || x.room_id==F.room_id)
+        .filter(x=> !F.building_id || (roomById[x.room_id]?.building_id==F.building_id))
+        .filter(x=> !F.department_id || (bById[roomById[x.room_id]?.building_id]?.department_id==F.department_id))
+        .filter(x=> !F.direction_id || (depById[bById[roomById[x.room_id]?.building_id]?.department_id]?.direction_id==F.direction_id));
+      rows = applyRoleFilter(rowsData)
+        .map(x=>[
+          escapeHtml(dirById[depById[bById[roomById[x.room_id]?.building_id]?.department_id]?.direction_id]?.name || '—'),
+          escapeHtml(depById[bById[roomById[x.room_id]?.building_id]?.department_id]?.name || '—'),
+          escapeHtml(bById[roomById[x.room_id]?.building_id]?.name || '—'),
+          escapeHtml(roomById[x.room_id]?.name || '—'),
+          escapeHtml(x.name),
+          actions('cabinet_rows', x.id, x)
+        ]);
+      break;
+
+    case 'cabinets':
+      headers = ['Дирекция','Подразделение','Здание','Помещение','Ряд','Шкаф','Действия'];
+      let cabsData = state.data.cabinets
+        .filter(x=> !F.row_id || x.cabinet_row_id==F.row_id)
+        .filter(x=> !F.room_id || (rowById[x.cabinet_row_id]?.room_id==F.room_id))
+        .filter(x=> !F.building_id || (roomById[rowById[x.cabinet_row_id]?.room_id]?.building_id==F.building_id))
+        .filter(x=> !F.department_id || (bById[roomById[rowById[x.cabinet_row_id]?.room_id]?.building_id]?.department_id==F.department_id))
+        .filter(x=> !F.direction_id || (depById[bById[roomById[rowById[x.cabinet_row_id]?.room_id]?.building_id]?.department_id]?.direction_id==F.direction_id));
+      rows = applyRoleFilter(cabsData)
+        .map(x=>[
+          escapeHtml(dirById[depById[bById[roomById[rowById[x.cabinet_row_id]?.room_id]?.building_id]?.department_id]?.direction_id]?.name || '—'),
+          escapeHtml(depById[bById[roomById[rowById[x.cabinet_row_id]?.room_id]?.building_id]?.department_id]?.name || '—'),
+          escapeHtml(bById[roomById[rowById[x.cabinet_row_id]?.room_id]?.building_id]?.name || '—'),
+          escapeHtml(roomById[rowById[x.cabinet_row_id]?.room_id]?.name || '—'),
+          escapeHtml(rowById[x.cabinet_row_id]?.name || '—'),
+          escapeHtml(x.name || x.code || '—'),
+          actions('cabinets', x.id, x)
+        ]);
+      break;
+
+    case 'equipment':
+  headers = ['Дирекция','Подразделение','Здание','Помещение','Ряд','Шкаф','Оборудование','Серийный №','Действия'];
+  let eqData = state.data.equipment
+    .filter(x=> !F.cabinet_id || x.cabinet_id==F.cabinet_id)
+    .filter(x=> !F.row_id || (cabById[x.cabinet_id]?.cabinet_row_id==F.row_id))
+    .filter(x=> !F.room_id || (roomById[rowById[cabById[x.cabinet_id]?.cabinet_row_id]?.room_id]?.id==F.room_id))
+    .filter(x=> !F.building_id || (bById[roomById[rowById[cabById[x.cabinet_id]?.cabinet_row_id]?.room_id]?.building_id]?.id==F.building_id))
+    .filter(x=> !F.department_id || (depById[bById[roomById[rowById[cabById[x.cabinet_id]?.cabinet_row_id]?.room_id]?.building_id]?.department_id]?.id==F.department_id))
+    .filter(x=> !F.direction_id || (dirById[depById[bById[roomById[rowById[cabById[x.cabinet_id]?.cabinet_row_id]?.room_id]?.building_id]?.department_id]?.direction_id]?.id==F.direction_id));
+  rows = applyRoleFilter(eqData)
+    .map(x=>{
+      // Упрощенная и надежная цепочка получения данных
+      const cabinet = cabById[x.cabinet_id];
+      const cabinetRow = rowById[cabinet?.cabinet_row_id];
+      const room = roomById[cabinetRow?.room_id];
+      const building = bById[room?.building_id];
+      const department = depById[building?.department_id];
+      const direction = dirById[department?.direction_id];
+      
+      return [
+        escapeHtml(direction?.name || '—'),
+        escapeHtml(department?.name || '—'),
+        escapeHtml(building?.name || '—'), // Теперь здание будет отображаться правильно
+        escapeHtml(room?.name || '—'),
+        escapeHtml(cabinetRow?.name || '—'),
+        escapeHtml(cabinet?.name || cabinet?.code || '—'),
+        escapeHtml(x.name || '—'),
+        escapeHtml(x.serial_number || '—'),
+        actions('equipment', x.id, x, /* isEquipment */ true)
+      ];
+    });
+  break;
+
+    case 'employees':
+      headers = ['Дирекция','Подразделение','Здание','ФИО','Роль','Логин','Действия'];
+      let empsData = state.data.employees
+        .filter(x=> !F.department_id || x.department_id==F.department_id)
+        .filter(x=> !F.direction_id || x.direction_id==F.direction_id)
+        .filter(x=> !F.building_id || x.building_id==F.building_id);
+      rows = applyRoleFilter(empsData)
+        .map(x=>[
+          escapeHtml(dirById[x.direction_id]?.name || '—'),
+          escapeHtml(depById[x.department_id]?.name || '—'),
+          escapeHtml(bById[x.building_id]?.name || '—'),
+          escapeHtml(x.full_name),
+          escapeHtml(x.role),
+          escapeHtml(x.login),
+          actions('employees_info', x.id, x)
+        ]);
+      break;
+  }
+
+  if(!rows.length){
+    wrap.innerHTML = '<div class="empty">Нет данных для отображения.</div>';
+    return;
+  }
+
+  let html = '<table><thead><tr>';
+  html += headers.map(h=>`<th>${h}</th>`).join('');
+  html += '</tr></thead><tbody>';
+  for(const r of rows){
+    const actionsHtml = r[r.length-1];
+    const meta = parseActionMeta(actionsHtml);
+    const isJustAdded = state.justAdded && state.justAdded.endpoint===meta.endpoint && state.justAdded.id==meta.id;
+    html += `<tr data-endpoint="${meta.endpoint}" data-id="${meta.id}" class="${isJustAdded?'row-added':''}">` +
+            r.map((c,i)=>`<td>${(c ?? '—')}</td>`).join('') + '</tr>';
+  }
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+
+  // Сброс пометки "только что добавлено" через секунду
+  if(state.justAdded){
+    setTimeout(()=>{ state.justAdded = null; }, 1000);
+  }
+}
+
+  // достаём endpoint и id из html действий
+  function parseActionMeta(html){
+    // ищем onDelete('<endpoint>', id)
+    const m = html.match(/onDelete\('([^']+)',\s*([0-9]+)\)/);
+    return { endpoint: m ? m[1] : '', id: m ? +m[2] : 0 };
+  }
+
+  function actions(endpoint, id, record, isEquipment){
+  const role = state.user?.role?.toLowerCase();
+
+  // Электромеханик – только просмотр файлов оборудования
+  if (role === 'электромеханик') {
+    return endpoint === 'equipment'
+      ? `<div class="actions"><button class="btn" type="button" onclick='openFilesDrawer(${id})'>Файлы</button></div>`
+      : '';
+  }
+
+  // Оператор – только сотрудники (без удаления)
+  if (role === 'оператор') {
+    if (endpoint === 'employees_info') {
+      return `
+        <div class="actions">
+          <button class="btn secondary" type="button" onclick='onEdit("${endpoint}", ${id})'>Редактировать</button>
+        </div>`;
+    }
+    return '';
+  }
+
+ // ЦСС - полный доступ ко всем действиям
+    if (role === 'цсс') {
+      const filesBtn = (endpoint==='equipment')
+        ? `<button class="btn" type="button" onclick='openFilesDrawer(${id})'>Файлы</button>`
+        : '';
+      return `
+        <div class="actions">
+          ${filesBtn}
+          <button class="btn danger" type="button" onclick="onDelete('${endpoint}', ${id})">Удалить</button>
+          <button class="btn secondary" type="button" onclick='onEdit("${endpoint}", ${id})'>Редактировать</button>
+        </div>`;
+    }
+    const filesBtn = (endpoint==='equipment')
+      ? `<button class="btn" type="button" onclick='openFilesDrawer(${id})'>Файлы</button>`
+      : '';
+    return `
+      <div class="actions">
+        ${filesBtn}
+        <button class="btn danger" type="button" onclick="onDelete('${endpoint}', ${id})">Удалить</button>
+        <button class="btn secondary" type="button" onclick='onEdit("${endpoint}", ${id})'>Редактировать</button>
+      </div>`;
+  }
+
+  function renderForm(){
+   const form = byId('form');
+  const F = state.filters;
+  const editing = state.edit;
+  
+  const role = state.user?.role?.toLowerCase();
+  if (role === 'электромеханик') {
+    form.innerHTML = '<div class="empty">Нет прав на редактирование данных</div>';
+    return;
+  }
+  if (role === 'оператор' && state.tab !== 'employees') {
+    form.innerHTML = '<div class="empty">Нет прав на редактирование этой вкладки</div>';
+    return;
+  }
+  if (role === 'цсс') {
+      // Без ограничений
+    }
+    else if (role === 'главный инженер' && state.user.direction_id) {
+      // Автоматически устанавливаем фильтр дирекции если не установлен
+      if (!F.direction_id) {
+        F.direction_id = state.user.direction_id;
+      }
+    }
+
+ 
+  // Получаем отфильтрованные данные для селектов
+  const filteredDirections = getDataFilter('directions') 
+    ? state.data.directions.filter(getDataFilter('directions'))
+    : state.data.directions;
+    
+  const filteredDepartments = getDataFilter('departments')
+    ? state.data.departments.filter(getDataFilter('departments'))
+    : state.data.departments;
+    
+  const filteredBuildings = getDataFilter('buildings')
+    ? state.data.buildings.filter(getDataFilter('buildings'))
+    : state.data.buildings;
+    
+  const filteredRooms = getDataFilter('rooms')
+    ? state.data.rooms.filter(getDataFilter('rooms'))
+    : state.data.rooms;
+    
+  const filteredRows = getDataFilter('cabinet_rows')
+    ? state.data.rows.filter(getDataFilter('cabinet_rows'))
+    : state.data.rows;
+    
+  const filteredCabinets = getDataFilter('cabinets')
+    ? state.data.cabinets.filter(getDataFilter('cabinets'))
+    : state.data.cabinets;
+
+  // заготовки селектов (с отфильтрованными данными)
+  const dirSel = `<label>Дирекция *</label>
+    <select id="a_dir"><option value="">— выберите —</option>
+    ${filteredDirections.map(d=>`<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('')}
+    </select>`;
+
+  const depSel = `<label>Подразделение *</label>
+    <select id="a_dep"><option value="">— выберите —</option></select>`;
+
+  const bSel = `<label>Здание *</label>
+    <select id="a_bld"><option value="">— выберите —</option></select>`;
+
+  const rSel = `<label>Помещение *</label>
+    <select id="a_room"><option value="">— выберите —</option></select>`;
+
+  const rowSel = `<label>Ряд шкафов *</label>
+    <select id="a_row"><option value="">— выберите —</option></select>`;
+
+  const cabSel = `<label>Шкаф *</label>
+    <select id="a_cab"><option value="">— выберите —</option></select>`;
+
+  let html = '<div class="muted" style="margin-bottom:8px">Заполните поля и нажмите «Сохранить».</div>';
+
+  switch(state.tab){
+    case 'directions': {
+      const nameVal = editing?.record?.name || '';
+      html += `<label>Введите название *</label><input id="a_name" type="text" placeholder="Введите название" value="${escapeAttr(nameVal)}" />`;
+      html += actionButtons('directions', editing);
+      break;
+    }
+    case 'departments': {
+      const nameVal = editing?.record?.name || '';
+      html += dirSel + `<label>Введите название *</label><input id="a_name" type="text" placeholder="Введите название" value="${escapeAttr(nameVal)}" />`;
+      html += actionButtons('departments', editing);
+      break;
+    }
+    case 'buildings': {
+      const nameVal = editing?.record?.name || '';
+      html += dirSel + depSel + `<label>Введите название *</label><input id="a_name" type="text" placeholder="Введите название" value="${escapeAttr(nameVal)}" />`;
+      html += actionButtons('buildings', editing);
+      break;
+    }
+    case 'rooms': {
+      const nameVal = editing?.record?.name || '';
+      html += dirSel + depSel + bSel + `<label>Введите название *</label><input id="a_name" type="text" placeholder="Введите название" value="${escapeAttr(nameVal)}" />`;
+      html += actionButtons('rooms', editing);
+      break;
+    }
+    case 'rows': {
+      const nameVal = editing?.record?.name || '';
+      html += dirSel + depSel + bSel + rSel + `<label>Введите название *</label><input id="a_name" type="text" placeholder="Введите название" value="${escapeAttr(nameVal)}" />`;
+      html += actionButtons('cabinet_rows', editing);
+      break;
+    }
+    case 'cabinets': {
+      const nameVal = editing?.record?.name || '';
+      html += dirSel + depSel + bSel + rSel + rowSel + `<label>Введите название *</label><input id="a_name" type="text" placeholder="Введите название" value="${escapeAttr(nameVal)}" />`;
+      html += actionButtons('cabinets', editing);
+      break;
+    }
+    case 'equipment': {
+      const nameVal = editing?.record?.name || '';
+      const descVal = editing?.record?.description || '';
+      const snVal = editing?.record?.serial_number || '';
+      html += dirSel + depSel + bSel + rSel + rowSel + cabSel +
+        `<label>Название *</label><input id="a_name" type="text" placeholder="Введите название" value="${escapeAttr(nameVal)}" />` +
+        `<label>Описание</label><input id="a_desc" type="text" placeholder="Введите описание" value="${escapeAttr(descVal)}" />` +
+        `<label>Серийный номер</label><input id="a_sn" type="text" placeholder="Введите серийный номер" value="${escapeAttr(snVal)}" />`;
+      html += actionButtons('equipment', editing);
+      break;
+    }
+    case 'employees': {
+  const e = editing?.record || {};
+  
+  // Создаем выпадающий список для ролей
+  const roleOptions = ['Главный инженер', 'Оператор', 'Электромеханик', 'ЦСС'];
+  const roleSelect = `
+    <select id="a_role">
+      <option value="">— выберите —</option>
+      ${roleOptions.map(role => 
+        `<option value="${role}" ${e.role === role ? 'selected' : ''}>${role}</option>`
+      ).join('')}
+    </select>
+  `;
+  
+  html += `
+    <div class="form-grid">
+      <div>
+        <label>ФИО *</label>
+        <input id="a_full_name" type="text" placeholder="Введите ФИО" value="${escapeAttr(e.full_name||'')}" />
+      </div>
+      <div>
+        <label>Роль *</label>
+        ${roleSelect}
+      </div>
+      <div>
+        ${dirSel}
+      </div>
+      <div>
+        ${depSel}
+      </div>
+      <div>
+        ${bSel}
+      </div>
+      <div>
+        <label>Логин *</label>
+        <input id="a_login" type="text" placeholder="Введите логин" value="${escapeAttr(e.login||'')}" />
+      </div>
+      <div>
+        <label>Пароль ${editing ? '(оставьте пустым, чтобы не менять)' : '*'}</label>
+        <input id="a_password" type="password" placeholder="${editing ? 'не менять' : 'Введите пароль'}" />
+      </div>
+    </div>
+    <div class="hint">При создании/изменении пароля на сервере выполняется bcrypt-хэширование. Если при редактировании пароль оставить пустым — он не изменится.</div>
+  `;
+  html += actionButtons('employees_info', editing);
+  break;
+}
+  }
+
+  form.innerHTML = html;
+
+  // --- проставляем значения и настраиваем каскад внутри формы ---
+  const formDir = byId('a_dir');
+  const formDep = byId('a_dep');
+  const formBld = byId('a_bld');
+  const formRoom= byId('a_room');
+  const formRow = byId('a_row');
+  const formCab = byId('a_cab');
+
+  // helpers для наполнения (используют отфильтрованные данные)
+  function setDeps(dirId, selected){
+    let arr = filteredDepartments;
+    if (dirId) {
+      arr = arr.filter(d => d.direction_id == dirId);
+    }
+    formDep && (formDep.innerHTML = '<option value="">— выберите —</option>' + arr.map(d=>`<option value="${d.id}" ${selected==d.id?'selected':''}>${escapeHtml(d.name)}</option>`).join(''));
+  }
+  
+  function setBlds(depId, selected){
+    let arr = filteredBuildings;
+    if (depId) {
+      arr = arr.filter(b => b.department_id == depId);
+    }
+    formBld && (formBld.innerHTML = '<option value="">— выберите —</option>' + arr.map(b=>`<option value="${b.id}" ${selected==b.id?'selected':''}>${escapeHtml(b.name)}</option>`).join(''));
+  }
+  
+  function setRooms(bldId, selected){
+    let arr = filteredRooms;
+    if (bldId) {
+      arr = arr.filter(r => r.building_id == bldId);
+    }
+    formRoom && (formRoom.innerHTML = '<option value="">— выберите —</option>' + arr.map(r=>`<option value="${r.id}" ${selected==r.id?'selected':''}>${escapeHtml(r.name)}</option>`).join(''));
+  }
+  
+  function setRows(roomId, selected){
+    let arr = filteredRows;
+    if (roomId) {
+      arr = arr.filter(r => r.room_id == roomId);
+    }
+    formRow && (formRow.innerHTML = '<option value="">— выберите —</option>' + arr.map(r=>`<option value="${r.id}" ${selected==r.id?'selected':''}>${escapeHtml(r.name)}</option>`).join(''));
+  }
+  
+  function setCabs(rowId, selected){
+    let arr = filteredCabinets;
+    if (rowId) {
+      arr = arr.filter(c => c.cabinet_row_id == rowId);
+    }
+    formCab && (formCab.innerHTML = '<option value="">— выберите —</option>' + arr.map(c=>`<option value="${c.id}" ${selected==c.id?'selected':''}>${escapeHtml(c.name || c.code || ('Шкаф #'+c.id))}</option>`).join(''));
+  }
+
+    // начальные значения для формы при редактировании
+    if(editing){
+      const rec = editing.record;
+      switch(state.tab){
+        case 'departments':
+          formDir && (formDir.value = rec.direction_id);
+          setDeps(rec.direction_id);
+          break;
+        case 'buildings': {
+          const depId = rec.department_id;
+          const dirId = state.data.departments.find(d=>d.id==depId)?.direction_id;
+          formDir && (formDir.value = dirId || '');
+          setDeps(dirId, depId);
+          break;
+        }
+        case 'rooms': {
+          const bldId = rec.building_id;
+          const depId = state.data.buildings.find(b=>b.id==bldId)?.department_id;
+          const dirId = state.data.departments.find(d=>d.id==depId)?.direction_id;
+          formDir && (formDir.value = dirId || '');
+          setDeps(dirId, depId);
+          setBlds(depId, bldId);
+          break;
+        }
+        case 'rows': {
+          const roomId = rec.room_id;
+          const bldId  = state.data.rooms.find(r=>r.id==roomId)?.building_id;
+          const depId  = state.data.buildings.find(b=>b.id==bldId)?.department_id;
+          const dirId  = state.data.departments.find(d=>d.id==depId)?.direction_id;
+          formDir && (formDir.value = dirId || '');
+          setDeps(dirId, depId);
+          setBlds(depId, bldId);
+          setRooms(bldId, roomId);
+          break;
+        }
+        case 'cabinets': {
+          const rowId  = rec.cabinet_row_id;
+          const roomId = state.data.rows.find(r=>r.id==rowId)?.room_id;
+          const bldId  = state.data.rooms.find(r=>r.id==roomId)?.building_id;
+          const depId  = state.data.buildings.find(b=>b.id==bldId)?.department_id;
+          const dirId  = state.data.departments.find(d=>d.id==depId)?.direction_id;
+          formDir && (formDir.value = dirId || '');
+          setDeps(dirId, depId);
+          setBlds(depId, bldId);
+          setRooms(bldId, roomId);
+          setRows(roomId, rowId);
+          break;
+        }
+        case 'equipment': {
+          const cabId = rec.cabinet_id;
+          const rowId  = state.data.cabinets.find(c=>c.id==cabId)?.cabinet_row_id;
+          const roomId = state.data.rows.find(r=>r.id==rowId)?.room_id;
+          const bldId  = state.data.rooms.find(r=>r.id==roomId)?.building_id;
+          const depId  = state.data.buildings.find(b=>b.id==bldId)?.department_id;
+          const dirId  = state.data.departments.find(d=>d.id==depId)?.direction_id;
+          formDir && (formDir.value = dirId || '');
+          setDeps(dirId, depId);
+          setBlds(depId, bldId);
+          setRooms(bldId, roomId);
+          setRows(roomId, rowId);
+          setCabs(rowId, cabId);
+          break;
+        }
+        case 'employees': {
+          const dirId = rec.direction_id;
+          const depId = rec.department_id;
+          formDir && (formDir.value = dirId || '');
+          setDeps(dirId, depId);
+          setBlds(depId, rec.building_id);
+          break;
+        }
+      }
+    } else {
+      // по фильтрам подставим значения (удобнее добавлять)
+      if(formDir){ formDir.value = F.direction_id || ''; setDeps(F.direction_id, F.department_id||''); }
+      if(formDep && F.department_id){ setBlds(F.department_id, F.building_id || ''); }
+      if(formDep && F.department_id){ setBlds(F.department_id, F.building_id||''); }
+      if(formBld && F.building_id){ setRooms(F.building_id, F.room_id||''); }
+      if(formRoom && F.room_id){ setRows(F.room_id, F.row_id||''); }
+      if(formRow && F.row_id){ setCabs(F.row_id, F.cabinet_id||''); }
+    }
+
+    // обработка каскада в форме
+    if(formDir){
+      formDir.onchange = ()=>{
+        setDeps(formDir.value || '');
+        if(formBld) formBld.innerHTML = '<option value="">— выберите —</option>';
+        if(formRoom) formRoom.innerHTML = '<option value="">— выберите —</option>';
+        if(formRow)  formRow.innerHTML  = '<option value="">— выберите —</option>';
+        if(formCab)  formCab.innerHTML  = '<option value="">— выберите —</option>';
+      };
+    }
+    if(formDep){
+      formDep.onchange = ()=>{
+        setBlds(formDep.value || '');
+        if(formRoom) formRoom.innerHTML = '<option value="">— выберите —</option>';
+        if(formRow)  formRow.innerHTML  = '<option value="">— выберите —</option>';
+        if(formCab)  formCab.innerHTML  = '<option value="">— выберите —</option>';
+      };
+    }
+    if(formBld){
+      formBld.onchange = ()=>{
+        setRooms(formBld.value || '');
+        if(formRow)  formRow.innerHTML  = '<option value="">— выберите —</option>';
+        if(formCab)  formCab.innerHTML  = '<option value="">— выберите —</option>';
+      };
+    }
+    if(formRoom){
+      formRoom.onchange = ()=>{
+        setRows(formRoom.value || '');
+        if(formCab)  formCab.innerHTML  = '<option value="">— выберите —</option>';
+      };
+    }
+    if(formRow){
+      formRow.onchange = ()=>{
+        setCabs(formRow.value || '');
+      };
+    }
+  }
+
+  function actionButtons(endpoint, editing){
+    const saveLabel = editing ? 'Сохранить изменения' : 'Сохранить';
+    const clearLabel= editing ? 'Отмена' : 'Очистить';
+    return `
+      <div class="form-actions">
+        <button class="btn" type="button" onclick="onSave('${endpoint}')">${saveLabel}</button>
+        <button class="btn secondary" type="button" onclick="onClearForm()">${clearLabel}</button>
+      </div>
+    `;
+  }
+
+  function onClearForm(){
+    state.edit = null;
+    renderForm();
+  }
+
+  // ---------- CRUD ----------
+  async function onSave(endpoint){
+  const role = state.user?.role?.toLowerCase();
+  if (role === 'электромеханик') {
+    return toast('Нет прав на редактирование');
+  }
+  if (role === 'оператор' && endpoint !== 'employees_info') {
+    return toast('Оператор может работать только с сотрудниками');
+  }
+  if (role === 'цсс') {
+      // Без ограничений
+    }
+    try{
+      const editing = state.edit && state.edit.endpoint===endpoint ? state.edit : null;
+      let payload = {};
+
+      switch(endpoint){
+        case 'directions': {
+          const name = byId('a_name').value.trim();
+          if(!name) return toast('Введите название дирекции');
+          
+          // Проверка уникальности имени дирекции
+          const isNameUnique = await checkNameUnique('directions', name, editing?.id);
+          if (!isNameUnique) {
+            return toast('Дирекция с таким названием уже существует');
+          }
+          
+          payload = { name };
+          break;
+        }
+        case 'departments': {
+          const direction_id = +byId('a_dir').value;
+          const name = byId('a_name').value.trim();
+          if(!direction_id || !name) return toast('Заполните обязательные поля');
+          
+          // Проверка уникальности имени подразделения в дирекции
+          const isNameUnique = await checkNameUnique('departments', name, editing?.id);
+          if (!isNameUnique) {
+            return toast('Подразделение с таким названием уже существует в этой дирекции');
+          }
+          
+          payload = { direction_id, name };
+          break;
+        }
+        case 'buildings': {
+          const depId = +byId('a_dep').value;
+          const name = byId('a_name').value.trim();
+          if(!depId || !name) return toast('Заполните обязательные поля');
+          
+          // Проверка уникальности имени здания в подразделении
+          const isNameUnique = await checkNameUnique('buildings', name, editing?.id);
+          if (!isNameUnique) {
+            return toast('Здание с таким названием уже существует в этом подразделении');
+          }
+          
+          payload = { department_id: depId, name };
+          break;
+        }
+        case 'rooms': {
+          const bldId = +byId('a_bld').value;
+          const name = byId('a_name').value.trim();
+          if(!bldId || !name) return toast('Заполните обязательные поля');
+          
+          // Проверка уникальности имени помещения в здании
+          const isNameUnique = await checkRoomUnique(name, bldId, editing?.id);
+          if (!isNameUnique) {
+            return toast('Помещение с таким названием уже существует в этом здании');
+          }
+          
+          // В БД rooms требуется department_id — берём его через здание
+          const depId = state.data.buildings.find(b=>b.id==bldId)?.department_id;
+          payload = { building_id: bldId, department_id: depId, name };
+          break;
+        }
+        case 'cabinet_rows': {
+          const roomId = +byId('a_room').value;
+          const name = byId('a_name').value.trim();
+          if(!roomId || !name) return toast('Заполните обязательные поля');
+          
+          // Проверка уникальности имени ряда в помещении
+          const isNameUnique = await checkNameUnique('cabinet_rows', name, editing?.id);
+          if (!isNameUnique) {
+            return toast('Ряд с таким названием уже существует в этом помещении');
+          }
+          
+          payload = { room_id: roomId, name };
+          break;
+        }
+        case 'cabinets': {
+          const rowId = +byId('a_row').value;
+          const name = byId('a_name').value.trim();
+          if(!rowId || !name) return toast('Заполните обязательные поля');
+          
+          // Проверка уникальности имени шкафа в ряду
+          const isNameUnique = await checkCabinetUnique(name, rowId, editing?.id);
+          if (!isNameUnique) {
+            return toast('Шкаф с таким названием уже существует в этом ряду');
+          }
+          
+          payload = { cabinet_row_id: rowId, name };
+          break;
+        }
+        case 'equipment': {
+          const cabId = +byId('a_cab').value;
+          const name = byId('a_name').value.trim();
+          if(!cabId || !name) return toast('Заполните обязательные поля');
+          
+          // Проверка уникальности имени оборудования в шкафу
+          const isNameUnique = await checkEquipmentUnique(name, cabId, editing?.id);
+          if (!isNameUnique) {
+            return toast('Оборудование с таким названием уже существует в этом шкафу');
+          }
+          
+          payload = {
+            cabinet_id: cabId,
+            name,
+            description: byId('a_desc').value.trim() || null,
+            serial_number: byId('a_sn').value.trim() || null
+          };
+          break;
+        }
+       case 'employees_info': {
+          const userRole = state.user?.role ? state.user.role.toLowerCase() : '';
+          const isOperator = userRole === 'оператор';
+          let dirId, depId, bldId;
+          
+          if (isOperator) {
+            dirId = state.user.direction_id;
+            depId = state.user.department_id;
+            bldId = byId('a_bld').value ? +byId('a_bld').value : null;
+          } else {
+            dirId = +byId('a_dir').value;
+            depId = +byId('a_dep').value;
+            bldId = +byId('a_bld').value;
+          }
+          
+          const full_name = byId('a_full_name').value.trim();
+          const role = byId('a_role').value;
+          const login = byId('a_login').value.trim();
+          const password = byId('a_password').value;
+          
+          // Проверка обязательных полей
+          if(!dirId || !depId || !bldId || !full_name || !role || !login || (!editing && !password)){
+            return toast('Заполните обязательные поля');
+          }
+          
+          // Проверка уникальности логина
+          const isLoginUnique = await checkLoginUnique(login, editing?.id);
+          if (!isLoginUnique) {
+            return toast('Логин уже занят. Выберите другой логин.');
+          }
+          
+          payload = { direction_id: dirId, department_id: depId, building_id: bldId, full_name, role, login };
+          if(password) payload.password = password;
+          break;
+        }
+      }
+
+      let result;
+      if(editing){
+        result = await apiPut(`${endpoint}/${editing.id}`, payload);
+        toast('Изменения сохранены');
+      }else{
+        result = await apiPost(endpoint, payload);
+        toast('Сохранено');
+        // отметим добавленную запись для анимации
+        if(result && result.id){
+          state.justAdded = { endpoint, id: result.id, ts: Date.now() };
+        }
+      }
+
+      state.edit = null;
+
+      // обновляем данные и остаёмся на текущей вкладке
+      await loadLookups(true); // Принудительно обновляем данные после изменений
+      await render();
+    }catch(e){
+      console.error(e);
+      toast('Ошибка сохранения: '+e.message, 5000);
+    }
+  }
+
+  async function onDelete(endpoint, id){
+    if(!confirm('Удалить запись?')) return;
+    try{
+      // найдём строку и анимируем
+      const row = document.querySelector(`tr[data-endpoint="${endpoint}"][data-id="${id}"]`);
+      if(row){
+        row.classList.add('row-removed');
+      }
+      // подождём окончание анимации
+      await new Promise(r=> setTimeout(r, 260));
+
+      await apiDelete(`${endpoint}/${id}`);
+      toast('Удалено');
+      await loadLookups();
+      await render();
+    }catch(e){
+      console.error(e);
+      toast('Ошибка удаления: '+e.message, 4000);
+      // на случай ошибки уберём класс, чтобы вернуть визуально
+      const row = document.querySelector(`tr[data-endpoint="${endpoint}"][data-id="${id}"]`);
+      if(row){
+        row.classList.remove('row-removed');
+      }
+    }
+  }
+
+  function onEdit(endpoint, id){
+    // найдём запись в state.data по endpoint
+    let collectionKey = null;
+    switch(endpoint){
+      case 'directions': collectionKey='directions'; break;
+      case 'departments': collectionKey='departments'; break;
+      case 'buildings': collectionKey='buildings'; break;
+      case 'rooms': collectionKey='rooms'; break;
+      case 'cabinet_rows': collectionKey='rows'; break;
+      case 'cabinets': collectionKey='cabinets'; break;
+      case 'equipment': collectionKey='equipment'; break;
+      case 'employees_info': collectionKey='employees'; break;
+    }
+    const rec = state.data[collectionKey].find(x=>x.id==id);
+    if(!rec) return toast('Запись не найдена');
+    state.edit = {endpoint, id, record: rec};
+    renderForm();
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  // ===== Drawer logic =====
+  const drawerEl = byId('filesDrawer');
+  const backdropEl = byId('drawerBackdrop');
+  const tabFilesBtn = byId('tabFilesBtn');
+  const tabFiles = byId('tabFiles');
+
+  function openFilesDrawer(equipmentId){
+    const eq = state.data.equipment.find(x=>x.id==equipmentId);
+    state.drawer.open = true;
+    state.drawer.equipmentId = equipmentId;
+    state.drawer.equipmentName = eq?.name || ('Оборудование #'+equipmentId);
+    state.drawer.activeTab = 'files';
+    byId('drawerTitle').textContent = 'Файлы: ' + state.drawer.equipmentName;
+    backdropEl.classList.add('open');
+    drawerEl.classList.add('open');
+    drawerEl.setAttribute('aria-hidden', 'false');
+    drawerEl.removeAttribute('inert');
+       // Фокус на кнопку закрытия для доступности
+    setTimeout(() => {
+        byId('drawerCloseBtn').focus();
+    }, 100);
+    
+    switchDrawerTab('files');
+    // подгрузим данные
+    refreshFiles();
+}
+  function closeFilesDrawer(){
+    state.drawer.open = false;
+    backdropEl.classList.remove('open');
+    drawerEl.classList.remove('open');
+    drawerEl.setAttribute('aria-hidden', 'true'); // Возвращаем
+    drawerEl.setAttribute('inert', ''); // Добавляем inert при закрытии
+  }
+  byId('drawerCloseBtn').onclick = closeFilesDrawer;
+  backdropEl.onclick = closeFilesDrawer;
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && state.drawer.open) {
+        closeFilesDrawer();
+    }
+  });
+
+  function switchDrawerTab(which){
+    state.drawer.activeTab = which;
+    tabFilesBtn.classList.toggle('active', which === 'files');
+    tabFiles.style.display = which === 'files' ? 'block' : 'none';
+  }
+  tabFilesBtn.onclick = ()=> switchDrawerTab('files');
+
+  async function refreshFiles(){
+    const id = state.drawer.equipmentId;
+    if(!id) return;
+    try{
+      const files = await apiGet(`/equipment/${id}/files`);
+      state.drawer.files = Array.isArray(files) ? files : [];
+      renderFilesList();
+    }catch(e){
+      console.error(e);
+      state.drawer.files = [];
+      renderFilesList();
+      toast('Не удалось загрузить список файлов: '+e.message, 4000);
+    }
+  }
+
+  function renderFilesList(){
+	const box = byId('filesList');
+	const files = state.drawer.files;
+	if(!files.length){
+		box.innerHTML = '<div class="empty">Файлы не найдены. Загрузите Excel/CSV через форму выше.</div>';
+		return;
+    }
+    box.innerHTML = files.map(f=>{
+	const when = f.uploaded_at ? new Date(f.uploaded_at).toLocaleString() : '';
+	return `
+		<div class="file-item" id="file-${f.id}">
+			<div class="file-head">
+				<div>
+					<div><b>${escapeHtml(f.name || 'Файл')}</b></div>
+						<div class="soft small">ID: ${f.id ?? '—'} · ${when ? ('Загружен: '+when) : ''}</div>
+				</div>
+				<div class="file-actions">
+					<button class="btn" type="button" onclick="toggleFilePreview(${f.id})">Открыть</button>
+					<button class="btn secondary" type="button" onclick="downloadFile(${f.id})">Скачать</button>
+					<button class="btn danger" type="button" onclick="deleteFile(${f.id})">Удалить</button>
+				</div>
+			</div>
+			<div class="file-preview soft small" style="display:none; margin-top:8px;"></div>
+			</div>`;
+			}).join('');
+  }
+
+  function renderPreviewTable(rows){
+    if(!Array.isArray(rows) || !rows.length) return '<div class="soft small" style="margin-top:6px">Нет предпросмотра</div>';
+    const header = rows[0] || [];
+    const body = rows.slice(1, 51); // покажем до 50 строк
+    let html = '<div class="table-scroll"><table class="mini-table"><thead><tr>';
+    html += header.map(h=>`<th>${escapeHtml(String(h))}</th>`).join('');
+    html += '</tr></thead><tbody>';
+    for(const r of body){
+      html += '<tr>'+ (r||[]).map(c=>`<td>${escapeHtml(String(c??''))}</td>`).join('') + '</tr>';
+    }
+    html += '</tbody></table></div>';
+    return html;
+  }
+
+	function toggleFilePreview(fileId){
+		const file = state.drawer.files.find(f=>f.id===fileId);
+		if(!file) return;
+		const wrap = document.querySelector(`#file-${fileId} .file-preview`);
+		if(!wrap) return;
+
+		if(wrap.style.display==='none'){
+			wrap.innerHTML = renderPreviewTable(file.preview || file.data || []);
+			wrap.style.display = 'block';
+		}else{
+			wrap.style.display = 'none';
+		}
+	}
+
+  // Загрузка файла
+  byId('uploadForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fileInput = byId('uploadFileInput');
+    const file = fileInput.files && fileInput.files[0];
+    if(!file) { toast('Выберите файл'); return; }
+    try{
+      const fd = new FormData();
+      fd.append('file', file);
+      await apiPostForm(`/equipment/${state.drawer.equipmentId}/upload`, fd);
+      fileInput.value = '';
+      toast('Файл загружен');
+      await refreshFiles();
+    }catch(err){
+      console.error(err);
+      toast('Ошибка загрузки: '+err.message, 5000);
+    }
+  });
+
+  // Скачать файл (пытаемся через download_url, иначе стандартный маршрут)
+ async function downloadFile(fileId){
+  try{
+    const base = getApiBase().replace(/\/$/, '');
+    // Используем только существующий маршрут
+    const downloadUrl = `${base}/equipment/files/${fileId}/download`;
+    window.open(downloadUrl, '_blank');
+  }catch(e){
+    console.error(e);
+    toast('Не удалось скачать файл', 3000);
+  }
+}
+
+  async function deleteFile(fileId){
+    if(!confirm('Удалить файл?')) return;
+    try{
+      await apiDelete(`/equipment/files/${fileId}`);
+      toast('Файл удалён');
+      await refreshFiles();
+    }catch(e){
+      console.error(e);
+      toast('Ошибка удаления: '+e.message, 4000);
+    }
+  }
+
+  function byId(id){ return document.getElementById(id); }
+
+  // ---------- Старт ----------
+  (async function init(){
+    const apiInput = byId('apiBaseInput');
+    const saved = localStorage.getItem('apiBase');
+    if(saved){ 
+        apiInput.value = saved; 
+    }
+    
+    byId('saveApiBtn').onclick = ()=>{
+        const v = apiInput.value.trim();
+        if(v) localStorage.setItem('apiBase', v);
+        toast('API сохранён');
+    };
+
+    const savedUser = localStorage.getItem('userData');
+    if (savedUser) {
+        try {
+            state.user = JSON.parse(savedUser);
+            
+            document.getElementById('appContainer').style.display = 'block';
+            document.getElementById('loginModal').style.display = 'none';
+            
+            // ИСПРАВЛЕНО: используем кэш при загрузке
+            await loadLookups(false); // false = использовать кэш если он валиден
+            
+            bindFilterEvents();
+            resetFilters();
+            updateUIForUserRole();
+            updateUserInfo();
+            await render();
+            
+            try {
+                const result = await apiGet('site/last-updates');
+                state.autoRefresh.lastUpdate = result.last_update;
+                console.log('🕒 Начальное время установлено:', state.autoRefresh.lastUpdate);
+            } catch (error) {
+                console.error('❌ Ошибка инициализации времени:', error);
+            }
+            
+            startAutoRefresh();
+            
+        } catch (e) {
+            console.error('Ошибка загрузки данных пользователя:', e);
+            localStorage.removeItem('userData');
+            localStorage.removeItem('lookupsCache');
+            showLoginModal();
+        }
+    } else {
+        showLoginModal();
+    }
+})();
+window.onload = () => {
+  const savedApi = localStorage.getItem('apiBase');
+  if (savedApi) {
+    document.getElementById('apiBaseInput').value = savedApi;  // Загружаем сохранённый API
+  }
+};
+window.addEventListener('beforeunload', function(e) {
+    // Можно спросить подтверждение, но это раздражает пользователей
+    // return 'Вы уверены, что хотите покинуть страницу?';
+  });
+  </script>
+</body>
+</html>
