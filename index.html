@@ -1,665 +1,175 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="description" content="Макросы AutoCAD для кабельных планов" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Макросы для кабельных планов</title>
-    <style>
-      :root {
-        box-sizing: border-box;
-        padding-top: env(safe-area-inset-top, 0px);
-        padding-bottom: env(safe-area-inset-bottom, 0px);
-        color-scheme: light;
-        --bg: #fff;
-        --panel: #fff;
-        --ink: #1c2733;
-        --mut: #5d6b78;
-        --line: #c9d3da;
-        --acc: #0a7f95;
-        --acc2: #b4237a;
-        --code: #f5f7f9;
-        --codeink: #1c2733;
-      }
-      html {
-        scroll-padding-top: env(safe-area-inset-top, 0px);
-      }
-      *,
-      *::before,
-      *::after {
-        box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        background: var(--bg);
-        color: var(--ink);
-        font:
-          15px/1.55 "Segoe UI",
-          system-ui,
-          Arial,
-          sans-serif;
-      }
-      .wrap {
-        max-width: 760px;
-        margin: 0 auto;
-        padding: 32px 18px 60px;
-      }
-      h1 {
-        font:
-          600 20px/1.2 "Segoe UI",
-          system-ui,
-          sans-serif;
-        margin: 0 0 2px;
-      }
-      h1 b {
-        color: var(--acc);
-      }
-      .sub {
-        color: var(--mut);
-        margin: 0 0 22px;
-      }
-      nav {
-        display: flex;
-        gap: 22px;
-        border-bottom: 1px solid var(--line);
-        margin-bottom: 8px;
-      }
-      nav a {
-        padding: 6px 0;
-        color: var(--mut);
-        text-decoration: none;
-        font-weight: 600;
-        border-bottom: 2px solid transparent;
-        margin-bottom: -1px;
-      }
-      nav a.on {
-        color: var(--ink);
-        border-bottom-color: var(--acc);
-      }
-      section {
-        display: none;
-      }
-      section.on {
-        display: block;
-      }
-      .card {
-        padding: 18px 0;
-        border-bottom: 1px solid var(--line);
-      }
-      h2 {
-        margin: 0 0 6px;
-        font:
-          600 16px "Segoe UI",
-          system-ui,
-          sans-serif;
-      }
-      code,
-      .mono {
-        font-family: Consolas, "Courier New", monospace;
-      }
-      .tag {
-        display: inline-block;
-        font:
-          12px Consolas,
-          monospace;
-        padding: 1px 7px;
-        border: 1px solid var(--line);
-        border-radius: 3px;
-        color: var(--mut);
-        margin: 0 4px 4px 0;
-      }
-      ol,
-      ul {
-        padding-left: 20px;
-        margin: 8px 0;
-      }
-      button,
-      .btn {
-        font:
-          600 14px "Segoe UI",
-          system-ui,
-          sans-serif;
-        padding: 8px 14px;
-        border-radius: 4px;
-        border: 1px solid var(--acc);
-        background: var(--acc);
-        color: #fff;
-        cursor: pointer;
-      }
-      button.s {
-        background: transparent;
-        color: var(--acc);
-      }
-      button.x {
-        padding: 4px 9px;
-      }
-      .row {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-top: 10px;
-      }
-      details {
-        margin-top: 10px;
-      }
-      summary {
-        cursor: pointer;
-        color: var(--acc);
-        font-weight: 600;
-      }
-      textarea.code {
-        width: 100%;
-        height: 260px;
-        margin-top: 8px;
-        background: var(--code);
-        color: var(--codeink);
-        border: 1px solid var(--line);
-        border-radius: 4px;
-        padding: 10px;
-        font:
-          12px/1.45 Consolas,
-          "Courier New",
-          monospace;
-        resize: vertical;
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-        gap: 12px;
-      }
-      label {
-        display: block;
-        font-size: 13px;
-        color: var(--mut);
-      }
-      input[type="text"],
-      input[type="number"] {
-        width: 100%;
-        padding: 7px 9px;
-        margin-top: 3px;
-        background: var(--bg);
-        color: var(--ink);
-        border: 1px solid var(--line);
-        border-radius: 4px;
-        font:
-          14px Consolas,
-          "Courier New",
-          monospace;
-      }
-      .scroll {
-        overflow-x: auto;
-      }
-      table {
-        border-collapse: collapse;
-        width: 100%;
-        margin: 8px 0 14px;
-        font-size: 14px;
-      }
-      th,
-      td {
-        border: 1px solid var(--line);
-        padding: 5px 9px;
-        text-align: left;
-        white-space: nowrap;
-      }
-      th {
-        background: var(--bg);
-        color: var(--mut);
-        font-weight: 600;
-      }
-      td input {
-        width: 90px;
-        padding: 3px 6px;
-      }
-      tr.tot td {
-        font-weight: 700;
-        background: var(--bg);
-      }
-      .drop {
-        border: 2px dashed var(--line);
-        border-radius: 4px;
-        padding: 26px;
-        text-align: center;
-        color: var(--mut);
-        background: var(--panel);
-      }
-      .drop.h {
-        border-color: var(--acc);
-        color: var(--acc);
-      }
-      .note {
-        color: var(--mut);
-        font-size: 13px;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <h1>cable<b>.</b>lsp</h1>
-      <p class="sub">Макросы AutoCAD для кабельных планов</p>
-      <nav>
-        <a href="#macros" data-t="macros">Макросы</a
-        ><a href="#config" data-t="config">Конфигуратор</a>
-      </nav>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>АТДП — помощник для AutoCAD</title>
+<style>
+:root{--bg:#f3f4f6;--card:#fff;--text:#1f2937;--muted:#5b6472;--accent:#1f5fbf;--on:#fff;--border:#d9dce1;--code:#eef1f5;color-scheme:light}
+:root[data-theme="dark"]{--bg:#12151c;--card:#1b1f29;--text:#e5e7eb;--muted:#9aa3b2;--accent:#6aa4ff;--on:#0b1220;--border:#2a3040;--code:#232a38;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+nav{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--border)}
+nav .wrap{display:flex;align-items:center;gap:20px;min-height:56px;flex-wrap:wrap}
+nav b{margin-right:auto;font-size:17px}
+nav a{color:var(--muted);text-decoration:none;font-size:15px}
+nav a:hover{color:var(--accent)}
+.btn{display:inline-block;padding:12px 22px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--on);font-weight:700;text-decoration:none;font-size:16px;cursor:pointer}
+.btn.alt{background:transparent;color:var(--accent)}
+.btn:hover{opacity:.9}
+.theme{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:8px;padding:6px 12px;font:inherit;font-size:14px;cursor:pointer}
+nav .btn{padding:7px 14px;font-size:14px;color:var(--on)}
+nav .btn:hover{color:var(--on)}
+.hero{padding:64px 0 40px}
+.hero h1{font-size:clamp(32px,6vw,48px);line-height:1.15;margin:0 0 14px}
+.hero p{font-size:19px;color:var(--muted);max-width:720px;margin:0 0 26px}
+.hero .row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+small,.note{color:var(--muted);font-size:14px}
+section{padding:40px 0}
+h2{font-size:28px;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px}
+.card h3{margin:0 0 8px;font-size:19px}
+.card p{margin:0 0 10px}
+.tag{display:inline-block;font-size:13px;padding:2px 8px;border:1px solid var(--border);border-radius:6px;color:var(--muted);background:var(--code)}
+ol.steps{list-style:none;margin:0;padding:0;display:grid;gap:14px;counter-reset:s}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:44px 1fr;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px}
+ol.steps li::before{content:counter(s);width:36px;height:36px;border-radius:50%;background:var(--accent);color:var(--on);display:grid;place-items:center;font-weight:700}
+ol.steps h3{margin:0 0 4px;font-size:18px}
+ol.steps p{margin:0;color:var(--muted)}
+code,pre{font-family:Consolas,"Courier New",monospace;background:var(--code);border-radius:6px}
+code{padding:1px 6px;font-size:.92em}
+.cmd{display:flex;align-items:center;gap:10px;background:var(--code);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:8px 0;overflow-x:auto}
+.cmd code{background:none;padding:0;flex:1;white-space:nowrap}
+.cmd button{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:6px;padding:4px 10px;cursor:pointer;font:inherit;font-size:13px}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+th{width:34%;color:var(--muted);font-weight:600}
+tr:last-child th,tr:last-child td{border-bottom:0}
+.scroll{overflow-x:auto}
+details{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:10px}
+summary{cursor:pointer;font-weight:600}
+details p{margin:10px 0 0;color:var(--muted)}
+.dl{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:32px;text-align:center}
+.dl h2{margin-bottom:8px}
+footer{padding:28px 0 40px;color:var(--muted);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+<nav><div class="wrap">
+  <b>АТДП</b>
+  <a href="#features">Возможности</a><a href="#usage">Как пользоваться</a><a href="#install">Установка</a><a href="#faq">Вопросы</a>
+  <button type="button" class="theme" id="theme" aria-label="Переключить тему">Тёмная тема</button>
+  <a class="btn" href="#download">Скачать</a>
+</div></nav>
 
-      <section id="macros">
-        <div class="card">
-          <h2>KABSUM — спецификация кабеля</h2>
-          <p>
-            Читает атрибуты блоков <code>ЖИЛЬНОСТЬ</code>, <code>ДЛИНА</code>, <code>МАРКА</code>.
-            Группирует по марке и жильности (скобки игнорируются), считает муфты по типам, бирки,
-            проволоку и соединительные ящики СЯ42/СЯ32. Слои выбираются кликом по блокам или вводом
-            имён через запятую.
-          </p>
-          <div class="row">
-            <button class="p" data-dl="kab">Скачать .lsp</button
-            ><button class="s" data-go="config">Настроить параметры</button>
-          </div>
-          <details>
-            <summary>Показать код</summary>
-            <textarea class="code" readonly id="kabView"></textarea>
-          </details>
-        </div>
-        <div class="card b">
-          <h2>RC — рельсовые цепи по путям</h2>
-          <p>
-            Вы выделяете рельсовые цепи пути, затем следующего и т. д. Макрос очищает MTEXT от кодов
-            форматирования, убирает повторы, сортирует номера и пишет по строке на путь с
-            количеством.
-          </p>
-          <div class="row"><button class="p" data-dl="rc">Скачать .lsp</button></div>
-          <details>
-            <summary>Показать код</summary>
-            <textarea class="code" readonly id="rcView"></textarea>
-          </details>
-        </div>
-        <div class="card">
-          <h2>Установка</h2>
-          <ol>
-            <li>Скачайте файл <code>.lsp</code>.</li>
-            <li>
-              В AutoCAD введите <code>APPLOAD</code>, выберите файл и нажмите «Загрузить». Чтобы не
-              загружать каждый раз, добавьте его в «Автозагрузку».
-            </li>
-            <li>
-              Запустите команду <code>KABSUM</code> или <code>RC</code>. Результат появится рядом с
-              dwg.
-            </li>
-          </ol>
-        </div>
-      </section>
+<header class="hero"><div class="wrap">
+  <h1>АТДП</h1>
+  <p>Помощник для работы с чертежами AutoCAD в проектах: составит ведомость табличек, посчитает кабели, муфты и бирки, соберёт рельсовые цепи по путям — и сохранит результат рядом с чертежом.</p>
+  <div class="row">
+    <a class="btn" href="%D0%90%D0%A2%D0%94%D0%9F.exe" download="АТДП.exe">Скачать АТДП.exe (37 МБ)</a>
+    <a class="btn alt" href="#usage">Как пользоваться</a>
+  </div>
+  <small>Для Windows · нужен AutoCAD · бесплатно</small>
+</div></header>
 
-      <section id="config">
-        <div class="card">
-          <h2>Конфигуратор KABSUM</h2>
-          <p class="note">Задайте нормы, получите готовый макрос с вашими значениями.</p>
-          <div class="grid">
-            <label
-              >Шаг установки муфт, м<input type="number" id="cStep" value="250" min="1" step="any"
-            /></label>
-            <label
-              >Метров кабеля на одну бирку<input
-                type="number"
-                id="cTs"
-                value="50"
-                min="1"
-                step="any"
-            /></label>
-            <label
-              >Бирок сверх расчёта (на кабель)<input type="number" id="cTb" value="1" min="0"
-            /></label>
-            <label>Бирок на каждую муфту<input type="number" id="cTm" value="2" min="0" /></label>
-            <label
-              >Проволока на 1 бирку<input type="number" id="cW" value="0.2" min="0" step="any"
-            /></label>
-            <label
-              >Марка по умолчанию (если пусто)<input
-                type="text"
-                id="cMark"
-                value="СБПВБПБбПнг(А)-HF"
-            /></label>
-          </div>
-          <h2 style="margin-top: 16px; font-size: 16px">Типы муфт по числу пар</h2>
-          <div class="scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>От</th>
-                  <th>До</th>
-                  <th>Название муфты</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="mt"></tbody>
-            </table>
-          </div>
-          <div class="row" style="margin-top: 0">
-            <button class="s" id="addM">+ Добавить диапазон</button>
-            <label style="display: flex; gap: 8px; align-items: center"
-              >Если не подошло:<input
-                type="text"
-                id="cOther"
-                value="муфта"
-                style="width: 140px; margin: 0"
-            /></label>
-          </div>
-          <div class="row">
-            <button class="p" id="cDl">Скачать макрос .lsp</button
-            ><button class="s" id="cReset">Сбросить</button>
-          </div>
-          <details>
-            <summary>Показать готовый код</summary>
-            <textarea class="code" readonly id="cOut"></textarea>
-          </details>
-        </div>
-      </section>
+<section id="features"><div class="wrap">
+  <h2>Что умеет программа</h2>
+  <p class="lead">Три действия — результат каждого сохраняется в файл рядом с чертежом.</p>
+  <div class="grid">
+    <div class="card"><h3>Ведомость табличек</h3>
+      <p>Находит ящики СЯ, ПЯ и дроссели, определяет пары и присваивает наименования. Наименования выкладываются в новый чертёж отдельными ячейками. Таблицу Excel можно добавить галочкой.</p>
+      <span class="tag">ведомость_табличек.dwg</span> <span class="tag">+ .xlsx по желанию</span></div>
+    <div class="card"><h3>Кабели, муфты, бирки, ящики</h3>
+      <p>По марке, жильности и длине кабеля считает муфты по заданному шагу, их типы, бирки, проволоку и соединительные ящики СЯ42 и СЯ32. Также можно задавать настраивать под проект.</p>
+      <span class="tag">кабель.xlsx</span></div>
+    <div class="card"><h3>Рельсовые цепи по путям</h3>
+      <p>Вы выделяете рамкой в AutoCAD цепи каждого пути, а программа собирает наименования и считает количество.</p>
+      <span class="tag">РЦ.xlsx</span></div>
+  </div>
+</div></section>
 
-      <div class="note" id="status" style="margin-top: 12px"></div>
-    </div>
-    <script>
-      const RC = String.raw`(vl-load-com)
+<section id="usage"><div class="wrap">
+  <h2>Как пользоваться</h2>
+  <p class="lead">Окно программы устроено сверху вниз: три шага.</p>
+  <ol class="steps">
+    <li><div><h3>Выберите чертёж</h3><p>Нажмите «Выбрать .dwg...». Если чертёж уже открыт в AutoCAD, программа работает с ним. Если нет — откроет сама и закроет после работы.</p></div></li>
+    <li><div><h3>Выберите слои (если нужно)</h3><p>Нажмите «Загрузить слои из чертежа» и отметьте нужные (Ctrl или Shift — несколько), «Сбросить выбор» снимает отметки. Для ведомости пустой выбор означает все слои.</p></div></li>
+    <li><div><h3>Нажмите «Запустить» в нужной карточке</h3><p>Ход работы виден в журнале. В конце появится сообщение, а файлы окажутся в папке с чертежом.</p></div></li>
+  </ol>
 
-;; очистка MTEXT от кодов форматирования
-(defun rc-clean (s / p q)
-  (while (vl-string-search "{" s) (setq s (vl-string-subst "" "{" s)))
-  (while (vl-string-search "}" s) (setq s (vl-string-subst "" "}" s)))
-  (while (setq p (vl-string-search "\\" s))
-    (setq q (vl-string-search ";" s p))
-    (if (and q (member (substr s (+ p 2) 1)
-                       '("f" "F" "H" "C" "c" "Q" "T" "W" "A" "L" "l" "O" "o" "K" "k")))
-      (setq s (strcat (substr s 1 p) (substr s (+ q 2))))
-      (setq s (strcat (substr s 1 p) (substr s (+ p 3))))))
-  (vl-string-trim " " s))
+  <div class="grid" style="margin-top:20px">
+    <div class="card"><h3>Ведомость табличек</h3>
+      <p>Программа создаёт новый чертёж <code>ведомость_табличек.dwg</code>: каждое наименование — в своей ячейке, текст по центру. Столбцы: «Наименование СЯ», «Наименование ПЯ», «Наименование СЯ светофора» и «Дроссель». Готовый чертёж остаётся открытым в AutoCAD. Чтобы получить ещё и таблицу <code>ведомость_табличек.xlsx</code>, поставьте галочку «Создать таблицу Excel».</p></div>
+    <div class="card"><h3>Рельсовые цепи</h3>
+      <p>Окно AutoCAD выйдет на передний план. Выделите рамкой цепи первого пути и нажмите Enter, затем следующего. Пустой Enter без выделения завершает ввод.</p></div>
+    <div class="card"><h3>Параметры кабелей</h3>
+      <p>Кнопка «Параметры...» открывает окно с конфигурацией данной функции, есть кнопка вернуть всё по умолчанию. Значение сохраняется в файле <code>кабель.json</code> рядом с программой.</p></div>
+  </div>
 
-;; собирает номера из 3-4 цифр: (отсортированный список уникальных, число дублей)
-(defun rc-collect (ss / i ed txt lst dup)
-  (setq lst nil dup 0)
-  (repeat (setq i (sslength ss))
-    (setq ed  (entget (ssname ss (setq i (1- i))))
-          txt (rc-clean (cdr (assoc 1 ed))))
-    (if (or (wcmatch txt "###") (wcmatch txt "####"))
-      (if (member txt lst)
-        (setq dup (1+ dup))
-        (setq lst (cons txt lst)))))
-  (list (vl-sort lst '(lambda (a b) (< (atoi a) (atoi b)))) dup))
+  <h2 style="margin-top:36px">Что должно быть в чертеже</h2>
+  <p class="lead">Программа читает блоки, их атрибуты и тексты.</p>
+  <div class="scroll"><table>
+    <tr><th>Ведомость табличек</th><td>блоки СЯ (в имени «ящик трансформаторный») и ПЯ с атрибутами <code>НАЗВАНИЕ</code> и <code>ЗНАЧЕНИЕ</code>, дроссели, рельсы (отрезки и полилинии), тексты с номерами цепей, блоки-мачты светофоров</td></tr>
+    <tr><th>Кабели</th><td>блоки с атрибутами <code>ЖИЛЬНОСТЬ</code>, <code>ДЛИНА</code> и (по желанию) <code>МАРКА</code> на выбранных слоях</td></tr>
+    <tr><th>Соединительные ящики</th><td>блоки со словом «ящик» в имени и атрибутом <code>ЗНАЧЕНИЕ</code> (например СЯ42)</td></tr>
+    <tr><th>Рельсовые цепи</th><td>тексты или мтексты с номером из 3–4 цифр</td></tr>
+  </table></div>
+</div></section>
 
-;; список строк -> "8020, 8022, 8024"
-(defun rc-join (lst / s)
-  (setq s "")
-  (foreach x lst
-    (setq s (if (= s "") x (strcat s ", " x))))
-  s)
+<section id="install"><div class="wrap">
+  <h2>Установка</h2>
+  <p class="lead">Установка не нужна — программа запускается одним файлом.</p>
+  <div class="scroll"><table>
+    <tr><th>Система</th><td>Windows 64-бит с установленным AutoCAD</td></tr>
+    <tr><th>Дополнительно</th><td>Не нужно, всё необходимое уже внутри <code>АТДП.exe</code></td></tr>
+  </table></div>
+  <ol class="steps" style="margin-top:16px">
+    <li><div><h3>Скачайте файл</h3><p>Нажмите кнопку «Скачать» ниже и положите <code>АТДП.exe</code> в любую папку.</p></div></li>
+    <li><div><h3>Запустите программу</h3><p>Дважды щёлкните по <code>АТДП.exe</code>. Первый запуск может занять несколько секунд — файл распаковывается.</p></div></li>
+    <li><div><h3>Следуйте трём шагам</h3><p>Выберите чертёж, при необходимости слои и нужное действие — см. раздел «Как пользоваться».</p></div></li>
+  </ol>
+</div></section>
 
-(defun c:RC ( / k ss res rows f path total cnt)
-  (setq k 1 rows nil total 0)
-  (while (progn
-           (princ (strcat "\nВыделите рельсовые цепи пути " (itoa k)
-                          " (Enter - закончить): "))
-           (setq ss (ssget '((0 . "TEXT,MTEXT")))))
-    (setq res  (rc-collect ss)
-          cnt  (length (car res))
-          rows (append rows (list (list k (car res))))
-          total (+ total cnt))
-    (princ (strcat "\nПуть " (itoa k) ": найдено цепей " (itoa cnt)))
-    (if (> (cadr res) 0)
-      (princ (strcat " (повторов пропущено: " (itoa (cadr res)) ")")))
-    (setq k (1+ k)))
-  (if rows
-    (progn
-      (setq path (strcat (getvar "DWGPREFIX") "rails.csv")
-            f (open path "w"))
-      (if f
-        (progn
-          (write-line "Путь;Рельсовые цепи;Количество" f)
-          (foreach r rows
-            (write-line
-              (strcat (itoa (car r)) ";\"" (rc-join (cadr r)) "\";"
-                      (itoa (length (cadr r))))
-              f))
-          (write-line (strcat "Всего;;" (itoa total)) f)
-          (close f)
-          (princ (strcat "\nВсего рельсовых цепей: " (itoa total)
-                         "\nФайл: " path)))
-        (princ "\nНе удалось записать файл. Закройте rc.csv в Excel и повторите.")))
-    (princ "\nНичего не выбрано."))
-  (princ))`,
-        KAB = String.raw`(defun kab-norm (s)
-  (while (vl-string-search "х" s) (setq s (vl-string-subst "x" "х" s)))
-  (while (vl-string-search "Х" s) (setq s (vl-string-subst "x" "Х" s)))
-  (while (vl-string-search "X" s) (setq s (vl-string-subst "x" "X" s)))
-  (vl-string-trim " " s))
-(defun kab-key (s / pos)
-  (setq pos (vl-string-search "(" s))
-  (if pos (vl-string-trim " " (substr s 1 pos)) s))
-(defun kab-sya (s)
-  (setq s (vl-string-trim " " s))
-  (while (vl-string-search "C" s) (setq s (vl-string-subst "С" "C" s)))
-  (while (vl-string-search "c" s) (setq s (vl-string-subst "С" "c" s)))
-  (while (vl-string-search "с" s) (setq s (vl-string-subst "С" "с" s)))
-  s)
-(defun kab-type (gil / pos n)
-  (setq pos (vl-string-search "x" gil)
-        n   (if pos (atoi (substr gil 1 pos)) 0))
-  (cond __TYPES__))
-(defun kab-ceil (x / k)
-  (setq k (fix x))
-  (if (< k x) (1+ k) k))
-(defun kab-mcount (dl step)
-  (if (<= dl 0) 0 (max 0 (1- (kab-ceil (/ dl step))))))
-(defun kab-tags (dl m)
-  (if (<= dl 0) 0 (+ (kab-ceil (/ dl __TSTEP__)) __TBASE__ (* __TMUF__ m))))
-(defun kab-split (s / pos r)
-  (while (setq pos (vl-string-search "," s))
-    (setq r (cons (vl-string-trim " " (substr s 1 pos)) r)
-          s (substr s (+ pos 2))))
-  (setq r (cons (vl-string-trim " " s) r))
-  (vl-remove "" (reverse r)))
-(defun kab-pick ( / sel lays ly s)
-  (princ "\nУкажите блоки на нужных слоях по очереди.")
-  (while (setq sel (entsel "\nУкажите блок (Enter - завершить выбор): "))
-    (setq ly (cdr (assoc 8 (entget (car sel)))))
-    (if (not (member ly lays)) (setq lays (append lays (list ly))))
-    (princ (strcat "\nДобавлен слой: " ly)))
-  (if (null lays)
-    (setq lays (kab-split (getstring T "\nИмена слоёв через запятую (можно с маской *): "))))
-  lays)
-(defun kab-inlist (blay lays / ok)
-  (foreach l lays
-    (if (wcmatch (strcase blay) (strcase l)) (setq ok T)))
-  ok)
-(defun c:KABSUM ( / lays ss i ib ed0 bname blay en ed tag val gil dl bv mrk key
-                    lst mlst blst p q m b mt f path n step total tb nbox c42 c32 defmark txt)
-  (setq lst nil mlst nil blst nil n 0 total 0 tb 0 nbox 0
-        step __STEP__
-        defmark "__MARK__")
-  (setq lays (kab-pick))
-  (if lays
-    (progn
-      (setq txt "")
-      (foreach l lays (setq txt (strcat txt (if (= txt "") "" ", ") l)))
-      (princ (strcat "\nСлои кабелей: " txt))
-      (if (setq ss (ssget '((0 . "INSERT") (66 . 1))))
-        (repeat (setq i (sslength ss))
-          (setq ib (ssname ss (setq i (1- i)))
-                ed0 (entget ib)
-                bname (cdr (assoc 2 ed0))
-                blay (cdr (assoc 8 ed0))
-                gil nil dl nil bv nil mrk nil
-                en (entnext ib))
-          (while (and en (= (cdr (assoc 0 (setq ed (entget en)))) "ATTRIB"))
-            (setq tag (strcase (cdr (assoc 2 ed)))
-                  val (cdr (assoc 1 ed)))
-            (cond ((= tag "ЖИЛЬНОСТЬ") (setq gil (kab-key (kab-norm val))))
-                  ((= tag "ДЛИНА")     (setq dl (atof val)))
-                  ((= tag "МАРКА")     (setq mrk (vl-string-trim " " val)))
-                  ((= tag "ЗНАЧЕНИЕ")  (setq bv (kab-sya val))))
-            (setq en (entnext en)))
-          (cond
-            ((and bv (/= bv "") (wcmatch bname "*Ящик*,*ящик*,*ЯЩИК*"))
-             (setq nbox (1+ nbox))
-             (if (setq q (assoc bv blst))
-               (setq blst (subst (cons bv (1+ (cdr q))) q blst))
-               (setq blst (cons (cons bv 1) blst))))
-            ((and gil dl (/= gil "") (kab-inlist blay lays))
-             (if (or (null mrk) (= mrk "")) (setq mrk defmark))
-             (setq key (strcat mrk "|" gil)
-                   n (1+ n)
-                   m (kab-mcount dl step)
-                   b (kab-tags dl m)
-                   tb (+ tb b))
-             (if (setq p (assoc key lst))
-               (setq lst (subst (list key gil mrk (+ (nth 3 p) dl) (+ (nth 4 p) m) (+ (nth 5 p) b)) p lst))
-               (setq lst (cons (list key gil mrk dl m b) lst)))
-             (if (> m 0)
-               (progn
-                 (setq mt (kab-type gil) total (+ total m))
-                 (if (setq q (assoc mt mlst))
-                   (setq mlst (subst (cons mt (+ (cdr q) m)) q mlst))
-                   (setq mlst (cons (cons mt m) mlst)))))))))
-      (setq lst (vl-sort lst '(lambda (x y)
-                  (or (< (atoi (cadr x)) (atoi (cadr y)))
-                      (and (= (atoi (cadr x)) (atoi (cadr y))) (< (caddr x) (caddr y))))))
-            mlst (vl-sort mlst '(lambda (x y) (< (car x) (car y)))))
-      (setq path (strcat (getvar "DWGPREFIX") "kabel_sum.csv")
-            f (open path "w"))
-      (write-line "Марка;Жильность;Длина;Кол-во муфт;Тип муфты;Бирки" f)
-      (foreach p lst
-        (write-line (strcat (caddr p) ";" (cadr p) ";" (rtos (nth 3 p) 2 2) ";" (itoa (nth 4 p)) ";"
-                            (if (> (nth 4 p) 0) (kab-type (cadr p)) "") ";" (itoa (nth 5 p))) f))
-      (write-line "" f)
-      (write-line "Тип муфты;Количество" f)
-      (foreach q mlst (write-line (strcat (car q) ";" (itoa (cdr q))) f))
-      (write-line (strcat "Всего;" (itoa total)) f)
-      (write-line "" f)
-      (write-line "Материал;Количество" f)
-      (write-line (strcat "Бирки;" (itoa tb)) f)
-      (write-line (strcat "Проволока;" (rtos (* tb __WIRE__) 2 1)) f)
-      (setq c42 (if (setq q (assoc "СЯ42" blst)) (cdr q) 0)
-            c32 (if (setq q (assoc "СЯ32" blst)) (cdr q) 0))
-      (write-line "" f)
-      (write-line "Соединительные ящики;Количество" f)
-      (write-line (strcat "СЯ42;" (itoa c42)) f)
-      (write-line (strcat "СЯ32;" (itoa c32)) f)
-      (foreach q blst
-        (if (not (member (car q) '("СЯ42" "СЯ32")))
-          (write-line (strcat (car q) ";" (itoa (cdr q))) f)))
-      (write-line (strcat "Всего ящиков;" (itoa nbox)) f)
-      (close f)
-      (princ (strcat "\nКабелей: " (itoa n) ", муфт: " (itoa total) ", бирок: " (itoa tb)
-                     "\nФайл: " path)))
-    (princ "\nСлой не задан."))
-  (princ))
-`;
-      const $ = (s) => document.querySelector(s),
-        $$ = (s) => [...document.querySelectorAll(s)];
-      const say = (t) => {
-        $("#status").textContent = t;
-      };
-      // навигация по хэшу
-      function nav() {
-        const h = (location.hash || "#macros").slice(1);
-        const t = ["macros", "config"].includes(h) ? h : "macros";
-        $$("section").forEach((s) => s.classList.toggle("on", s.id === t));
-        $$("nav a").forEach((a) => a.classList.toggle("on", a.dataset.t === t));
-      }
-      addEventListener("hashchange", nav);
-      nav();
-      $$("[data-go]").forEach((b) => (b.onclick = () => (location.hash = b.dataset.go)));
-      // сохранение
-      function save(name, data) {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(new Blob([data], { type: "text/plain;charset=utf-8" }));
-        a.download = name;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-        say("Файл сохранён: " + name);
-      }
-      // конфигуратор
-      const DEF = [
-        [3, 4, "МСБ-П 3-4"],
-        [7, 10, "МСБ-П 7-10"],
-        [12, 19, "МСБ-П 12-19"],
-        [21, 24, "МСБ-П 24"],
-        [27, 30, "МСБ-П 27-30"],
-      ];
-      function addRow(a, b, n) {
-        const tr = document.createElement("tr");
-        tr.innerHTML =
-          '<td><input type="number" min="1" value="' +
-          a +
-          '"></td><td><input type="number" min="1" value="' +
-          b +
-          '"></td><td><input type="text" style="width:200px" value=""></td><td><button class="s x">×</button></td>';
-        tr.querySelector("input[type=text]").value = n;
-        tr.querySelector("button").onclick = () => {
-          tr.remove();
-          gen();
-        };
-        tr.oninput = gen;
-        $("#mt").appendChild(tr);
-      }
-      const num = (v) => {
-        const n = parseFloat(String(v).replace(",", "."));
-        return isNaN(n) ? 0 : n;
-      };
-      const fl = (n) => (Number.isInteger(n) ? n + ".0" : String(n));
-      const q = (s) => String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-      function build() {
-        const rows = $$("#mt tr")
-          .map((r) => {
-            const i = r.querySelectorAll("input");
-            return [Math.round(num(i[0].value)), Math.round(num(i[1].value)), i[2].value];
-          })
-          .filter((r) => r[2]);
-        const types =
-          rows
-            .map((r) =>
-              r[0] === r[1]
-                ? `((= n ${r[0]}) "${q(r[2])}")`
-                : `((<= ${r[0]} n ${r[1]}) "${q(r[2])}")`,
-            )
-            .join("\n        ") + `\n        (T "${q($("#cOther").value || "муфта")}")`;
-        return KAB.replace("__TYPES__", types)
-          .replace("__STEP__", fl(Math.max(1, num($("#cStep").value))))
-          .replace("__TSTEP__", fl(Math.max(1, num($("#cTs").value))))
-          .replace("__TBASE__", String(Math.round(num($("#cTb").value))))
-          .replace("__TMUF__", String(Math.round(num($("#cTm").value))))
-          .replace(/__WIRE__/g, String(num($("#cW").value)))
-          .replace("__MARK__", q($("#cMark").value));
-      }
-      function gen() {
-        $("#cOut").value = build();
-      }
-      DEF.forEach((r) => addRow(...r));
-      gen();
-      $$("#config input").forEach((i) => i.addEventListener("input", gen));
-      $("#addM").onclick = () => {
-        addRow(1, 1, "");
-        gen();
-      };
-      $("#cReset").onclick = () => {
-        location.reload();
-      };
-      $("#cDl").onclick = () => save("kabsum.lsp", build());
-      $("#kabView").value = KAB.replace(
-        "__TYPES__",
-        DEF.map((r) => `((<= ${r[0]} n ${r[1]}) "${r[2]}")`).join("\n        ") +
-          '\n        (T "муфта")',
-      )
-        .replace("__STEP__", "250.0")
-        .replace("__TSTEP__", "50.0")
-        .replace("__TBASE__", "1")
-        .replace("__TMUF__", "2")
-        .replace(/__WIRE__/g, "0.2")
-        .replace("__MARK__", "СБПВБПБбПнг(А)-HF");
-      $("#rcView").value = RC;
-      $$("[data-dl]").forEach(
-        (b) =>
-          (b.onclick = () =>
-            b.dataset.dl === "rc" ? save("rc.lsp", RC) : save("kabsum.lsp", $("#kabView").value)),
-      );
-    </script>
-  </body>
+<section id="faq"><div class="wrap">
+  <h2>Частые вопросы</h2>
+  <p class="lead"></p>
+  <details><summary>Программа что-то меняет в моём чертеже?</summary><p>Нет. Исходный чертёж только читается. Результат ведомости табличек записывается в отдельный новый файл <code>ведомость_табличек.dwg</code>.</p></details>
+  <details><summary>Excel-файл не сохраняется</summary><p>Скорее всего, предыдущий файл открыт в Excel. Программа сохранит копию с временем в имени.</p></details>
+  <details><summary>Большой чертёж обрабатывается долго</summary><p>AutoCAD может быть занят. Программа ждёт и повторяет запросы, а ход работы виден в журнале. Не закрывайте AutoCAD до конца.</p></details>
+  <details><summary>Ящики или кабели не находятся</summary><p>Проверьте слои, имена блоков и названия атрибутов — они перечислены в разделе «Что должно быть в чертеже».</p></details>
+  <details><summary>Windows предупреждает при запуске</summary><p>Если появилось окно SmartScreen, нажмите «Подробнее» и «Выполнить в любом случае»: программа скачана с этого сайта и работает только с вашим AutoCAD.</p></details>
+</div></section>
+
+<section id="download"><div class="wrap">
+  <div class="dl">
+    <h2>Скачать программу</h2>
+    <p class="lead">Один файл <code>АТДП.exe</code>, около 37 МБ.</p>
+    <a class="btn" href="%D0%90%D0%A2%D0%94%D0%9F.exe" download="АТДП.exe">Скачать АТДП.exe</a>
+    <p class="note" style="margin-top:14px">Положите файл в любую папку и запустите — установка не требуется.</p>
+  </div>
+</div></section>
+
+<footer><div class="wrap">АТДП · помощник для чертежей AutoCAD в проектах</div></footer>
+<script>
+(function(){
+  var root=document.documentElement,btn=document.getElementById('theme');
+  function apply(t){
+    if(t==='dark'){root.setAttribute('data-theme','dark');btn.textContent='Светлая тема'}
+    else{root.setAttribute('data-theme','light');btn.textContent='Тёмная тема'}
+  }
+  var saved=null;
+  try{saved=localStorage.getItem('theme')}catch(e){}
+  apply(saved==='dark'?'dark':'light');
+  btn.addEventListener('click',function(){
+    var next=root.getAttribute('data-theme')==='dark'?'light':'dark';
+    apply(next);
+    try{localStorage.setItem('theme',next)}catch(e){}
+  });
+})();
+</script>
+</body>
 </html>
